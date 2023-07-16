@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <link rel="stylesheet" type="text/css" href="styles.css"/>
+<head>
+  <title>Binance Liquidations</title>
+</head>
+<body>
+  <h1>Binance Liquidations</h1>
+  <center> 
+  <table>
+    <thead>
+      <tr class="table-header">
+        <th>Symbol</th>
+        <th>Side</th>
+        <th>Order</th>
+        <th>Quantity</th>
+        <th>Liq Price</th>
+        <th>Order Status</th>
+        <th>Timestamp</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody id="liquidations-table-body">
+      <!-- Table rows will be dynamically added here -->
+    </tbody>
+  </table>
+</center>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/2.2.0/luxon.min.js"></script>
+  <script>
+    // JavaScript code to establish WebSocket connection and handle data
+    var socket = new WebSocket('wss://fstream.binance.com/ws/!forceOrder@arr');
+  
+    socket.onmessage = function(event) {
+      var data = JSON.parse(event.data).o;
+  
+      // Update the table with the received data
+      var tableBody = document.getElementById('liquidations-table-body');
+      var newRow = document.createElement('tr');
+  
+      // Create table cells and populate them with the data
+      var symbolCell = document.createElement('td');
+      symbolCell.textContent = data.s;
+      newRow.appendChild(symbolCell);
+  
+      var sideCell = document.createElement('td');
+      sideCell.textContent = data.S;
+
+      newRow.appendChild(sideCell);
+
+      var orderTypeCell = document.createElement('td');
+      orderTypeCell.textContent = data.o;
+      newRow.appendChild(orderTypeCell);
+  
+      var quantityCell = document.createElement('td');
+      quantityCell.textContent = data.q;
+      newRow.appendChild(quantityCell);
+  
+      var liqPriceCell = document.createElement('td');
+      liqPriceCell.textContent = data.ap;
+      newRow.appendChild(liqPriceCell);
+  
+      var orderStatusCell = document.createElement('td');
+      orderStatusCell.textContent = data.X;
+      newRow.appendChild(orderStatusCell);
+  
+      var timestampCell = document.createElement('td');
+      var timestamp = parseInt(data.T);
+      var timestampString = luxon.DateTime.fromMillis(timestamp).setZone('etc/UTC').toFormat('HH:mm:ss');
+      timestampCell.textContent = timestampString;
+      newRow.appendChild(timestampCell);
+  
+      var valueCell = document.createElement('td');
+      var value = parseFloat(data.q) * parseFloat(data.ap);
+      valueCell.textContent = value.toFixed(2);
+    
+    
+
+      if (data.S === "SELL") {
+        if (value < 500) {
+          newRow.classList.add("sell-lightRed-row");
+        } else if (value < 5000) {
+          newRow.classList.add("sell-redOne-row");
+        } else if (value < 10000) {
+          newRow.classList.add("sell-Red-row");
+        } else {
+          newRow.classList.add("sell-default-row");
+        }
+      } else if (data.S === "BUY") {
+        if (value < 500) {
+          newRow.classList.add("buy-lightGreen-row");
+        } else if (value < 5000) {
+          newRow.classList.add("buy-greenOne-row");
+        } else if (value < 10000) {
+          newRow.classList.add("buy-Green-row");
+        } else {
+          newRow.classList.add("buy-default-row");
+        }
+      }
+      newRow.appendChild(valueCell);
+      // Append the new row to the beginning of the table body
+      tableBody.insertBefore(newRow, tableBody.firstChild);
+
+    };
+  </script>
+</body>
+</html>
