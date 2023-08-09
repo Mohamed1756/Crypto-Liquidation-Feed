@@ -1,12 +1,28 @@
-body {
-  font-family: Arial, sans-serif;
+* {
   margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto Condensed', Arial, sans-serif;
+  background-color: #2b2b2b;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 20px;
-  background-color: rgb(84, 86, 87);
 }
 
 h1 {
   text-align: center;
+  margin-bottom: 20px;
+  color: #f0f0f0;
+  font-family: 'Oswald', Arial, sans-serif;
 }
 
 table {
@@ -16,51 +32,53 @@ table {
 }
 
 thead {
-  background-color: #f2f2f2;
+  background-color: #444;
 }
 
-th,
-td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #ccc;
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #666;
 }
 
 tbody tr:hover {
-  background-color: #f9f9f9;
+  background-color: #333;
 }
 
 .table-header {
   font-weight: bold;
 }
 
-/* Styles for different value ranges */
 .sell-lightRed-row {
-  background-color: #ffcccc; /* Light red color for sell values below 500 */
+  background-color: #d54343;
 }
+
 .sell-redOne-row {
-  background-color: #ff9999; /* Red color for sell values between 500 and 5000 */
+  background-color: #b52e2e;
 }
 
 .sell-Red-row {
-  background-color: #ff6666; /* Dark red color for sell values below 10000 */
+  background-color: #942020;
 }
 
 .sell-default-row {
-  background-color: #8b0000; /* Default red color for sell values above 10000 */
+  background-color: #6e0000;
 }
-.buy-lightGreen-row{
-  background-color: #ccffcc; /* Light green color for buy values below 500 */
+
+.buy-lightGreen-row {
+  background-color: #43a047;
 }
 
 .buy-greenOne-row {
-  background-color: #99ff99; /* Green color for buy values between 500 and 5000 */
+  background-color: #2e7d32;
 }
 
 .buy-Green-row {
-  background-color: #66ff66; /* Dark green color for buy values below 10000 */
+  background-color: #205723;
 }
 
 .buy-default-row {
-  background-color: #006700; /* Default green color for buy values above 10000 */
+  background-color: #004000;
 }
+
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300&family=Oswald:wght@500&display=swap');
