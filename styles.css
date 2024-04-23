@@ -13,7 +13,7 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 800px; /* Adjust the max-width as needed */
   margin: 0 auto;
   padding: 20px;
 }
@@ -26,9 +26,10 @@ h1 {
 }
 
 table {
-  width: 90%;
+  width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
+  font-size: 14px; /* Reduce font size */
 }
 
 thead {
@@ -36,8 +37,9 @@ thead {
 }
 
 th, td {
-  padding: 12px;
+  padding: 8px; /* Reduce padding */
   border-bottom: 1px solid #666;
+  text-align: center;
 }
 
 tbody tr:hover {
@@ -79,6 +81,93 @@ tbody tr:hover {
 .buy-default-row {
   background-color: #004000;
 }
+
+/* Align values below each category */
+td {
+  vertical-align: top;
+}
+
+/* Set width for each column */
+th:nth-child(1),
+td:nth-child(1) {
+  width: 10%;
+}
+
+th:nth-child(2),
+td:nth-child(2) {
+  width: 10%;
+}
+
+th:nth-child(3),
+td:nth-child(3) {
+  width: 10%;
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+  width: 15%;
+}
+
+th:nth-child(5),
+td:nth-child(5) {
+  width: 15%;
+}
+
+th:nth-child(6),
+td:nth-child(6) {
+  width: 15%;
+}
+
+th:nth-child(7),
+td:nth-child(7) {
+  width: 15%;
+}
+
+th:nth-child(8),
+td:nth-child(8) {
+  width: 10%;
+}
+/* Styles for filter section */
+.container {
+  margin: 20px auto;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.container label {
+  font-weight: bold;
+  margin-right: 5px; /* Adjust spacing between labels and inputs */
+}
+
+.container select,
+.container input[type="number"] {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.container select {
+  margin-right: 20px; /* Adjust spacing between elements */
+  background-image: url('data:image/svg+xml;utf8,<svg fill="#000000" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24px" height="24px"><path d="M7 10l5 5 5-5z" /></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+}
+
+.container input[type="number"]::-webkit-inner-spin-button,
+.container input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.container input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 
 /* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300&family=Oswald:wght@500&display=swap');

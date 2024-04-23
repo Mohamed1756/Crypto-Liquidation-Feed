@@ -1,106 +1,185 @@
 <!DOCTYPE html>
-<html>
-  <link rel="stylesheet" type="text/css" href="styles.css"/>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Binance Liquidations</title>
+  <link rel="stylesheet" type="text/css" href="styles.css"/>
+  <style>
+    /* Additional CSS for resizable table */
+    .table-container {
+      position: relative;
+      overflow: auto;
+      resize: vertical;
+      min-height: 100px; /* Set minimum height */
+      max-height: 80vh; /* Set maximum height */
+      border: 1px solid #ccc;
+    }
+
+    .resize-gripper {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 20px;
+      height: 20px;
+      background: url('https://image.flaticon.com/icons/png/512/25/25420.png') no-repeat center center;
+      cursor: nwse-resize; /* Use resize cursor */
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
   <h1>Binance Liquidations</h1>
-  <center> 
-  <table>
-    <thead>
-      <tr class="table-header">
-        <th>Symbol</th>
-        <th>Side</th>
-        <th>Order</th>
-        <th>Quantity</th>
-        <th>Liq Price</th>
-        <th>Order Status</th>
-        <th>Timestamp</th>
-        <th>Value</th>
-      </tr>
-    </thead>
-    <tbody id="liquidations-table-body">
-      <!-- Table rows will be dynamically added here -->
-    </tbody>
-  </table>
-</center>
+  
+  <div class="container">
+    <label for="coin-filter">Filter by Coin:</label>
+    <select id="coin-filter" onchange="filterByCoin()">
+      <option value="">All Coins</option>
+      <!-- Option for filtering all coins -->
+      <option value="BTC">BTC</option>
+      <option value="ETH">ETH</option>
+      <!-- Add more options if necessary -->
+    </select>
+
+    <label for="value-filter">Filter by Value:</label>
+    <select id="value-filter-operator">
+      <option value="gt">Greater Than</option>
+      <option value="lt">Less Than</option>
+      <option value="eq">Equal To</option>
+    </select>
+    <input type="number" id="value-filter" oninput="filterByValue()" placeholder="Enter value...">
+  </div>
+
+  <div class="table-container" id="table-container">
+    <table>
+      <thead>
+        <tr class="table-header">
+          <th>Symbol</th>
+          <th>Side</th>
+          <th>Order</th>
+          <th>Quantity</th>
+          <th>Liq Price</th>
+          <th>Order Status</th>
+          <th>Timestamp</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody id="liquidations-table-body">
+        <!-- Table rows will be dynamically added here -->
+      </tbody>
+    </table>
+    <div class="resize-gripper"></div> <!-- Gripper icon for resizing -->
+  </div>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/2.2.0/luxon.min.js"></script>
   <script>
-    // JavaScript code to establish WebSocket connection and handle data
+    var coinFilter = ""; // Variable to store selected coin filter
+    var valueFilter = 0; // Variable to store value filter
+    var valueFilterOperator = "gt"; // Variable to store value filter operator
+
     var socket = new WebSocket('wss://fstream.binance.com/ws/!forceOrder@arr');
   
     socket.onmessage = function(event) {
       var data = JSON.parse(event.data).o;
   
-      // Update the table with the received data
-      var tableBody = document.getElementById('liquidations-table-body');
-      var newRow = document.createElement('tr');
+      // Check if the data matches the filters
+      if ((coinFilter === "" || data.s.startsWith(coinFilter)) && 
+          (valueFilterOperator === "gt" && parseFloat(data.q) * parseFloat(data.ap) > valueFilter) ||
+          (valueFilterOperator === "lt" && parseFloat(data.q) * parseFloat(data.ap) < valueFilter) ||
+          (valueFilterOperator === "eq" && parseFloat(data.q) * parseFloat(data.ap) === valueFilter)) {
   
-      // Create table cells and populate them with the data
-      var symbolCell = document.createElement('td');
-      symbolCell.textContent = data.s;
-      newRow.appendChild(symbolCell);
+        var tableBody = document.getElementById('liquidations-table-body');
+        var newRow = document.createElement('tr');
   
-      var sideCell = document.createElement('td');
-      sideCell.textContent = data.S;
+        var symbolCell = document.createElement('td');
+        symbolCell.textContent = data.s;
+        newRow.appendChild(symbolCell);
+  
+        var sideCell = document.createElement('td');
+        sideCell.textContent = data.S;
+        newRow.appendChild(sideCell);
 
-      newRow.appendChild(sideCell);
+        var orderTypeCell = document.createElement('td');
+        orderTypeCell.textContent = data.o;
+        newRow.appendChild(orderTypeCell);
+  
+        var quantityCell = document.createElement('td');
+        quantityCell.textContent = data.q;
+        newRow.appendChild(quantityCell);
+  
+        var liqPriceCell = document.createElement('td');
+        liqPriceCell.textContent = data.ap;
+        newRow.appendChild(liqPriceCell);
+  
+        var orderStatusCell = document.createElement('td');
+        orderStatusCell.textContent = data.X;
+        newRow.appendChild(orderStatusCell);
+  
+        var timestampCell = document.createElement('td');
+        var timestamp = parseInt(data.T);
+        var timestampString = luxon.DateTime.fromMillis(timestamp).setZone('etc/UTC').toFormat('HH:mm:ss');
+        timestampCell.textContent = timestampString;
+        newRow.appendChild(timestampCell);
+  
+        var valueCell = document.createElement('td');
+        var value = parseFloat(data.q) * parseFloat(data.ap);
+        valueCell.textContent = value.toFixed(2);
 
-      var orderTypeCell = document.createElement('td');
-      orderTypeCell.textContent = data.o;
-      newRow.appendChild(orderTypeCell);
-  
-      var quantityCell = document.createElement('td');
-      quantityCell.textContent = data.q;
-      newRow.appendChild(quantityCell);
-  
-      var liqPriceCell = document.createElement('td');
-      liqPriceCell.textContent = data.ap;
-      newRow.appendChild(liqPriceCell);
-  
-      var orderStatusCell = document.createElement('td');
-      orderStatusCell.textContent = data.X;
-      newRow.appendChild(orderStatusCell);
-  
-      var timestampCell = document.createElement('td');
-      var timestamp = parseInt(data.T);
-      var timestampString = luxon.DateTime.fromMillis(timestamp).setZone('etc/UTC').toFormat('HH:mm:ss');
-      timestampCell.textContent = timestampString;
-      newRow.appendChild(timestampCell);
-  
-      var valueCell = document.createElement('td');
-      var value = parseFloat(data.q) * parseFloat(data.ap);
-      valueCell.textContent = value.toFixed(2);
-    
-    
-
-      if (data.S === "SELL") {
-        if (value < 500) {
-          newRow.classList.add("sell-lightRed-row");
-        } else if (value < 5000) {
-          newRow.classList.add("sell-redOne-row");
-        } else if (value < 10000) {
-          newRow.classList.add("sell-Red-row");
-        } else {
-          newRow.classList.add("sell-default-row");
+        if (data.S === "SELL") {
+          if (value < 500) {
+            newRow.classList.add("sell-lightRed-row");
+          } else if (value < 5000) {
+            newRow.classList.add("sell-redOne-row");
+          } else if (value < 10000) {
+            newRow.classList.add("sell-Red-row");
+          } else {
+            newRow.classList.add("sell-default-row");
+          }
+        } else if (data.S === "BUY") {
+          if (value < 500) {
+            newRow.classList.add("buy-lightGreen-row");
+          } else if (value < 5000) {
+            newRow.classList.add("buy-greenOne-row");
+          } else if (value < 10000) {
+            newRow.classList.add("buy-Green-row");
+          } else {
+            newRow.classList.add("buy-default-row");
+          }
         }
-      } else if (data.S === "BUY") {
-        if (value < 500) {
-          newRow.classList.add("buy-lightGreen-row");
-        } else if (value < 5000) {
-          newRow.classList.add("buy-greenOne-row");
-        } else if (value < 10000) {
-          newRow.classList.add("buy-Green-row");
-        } else {
-          newRow.classList.add("buy-default-row");
+        newRow.appendChild(valueCell);
+        // Append the new row to the beginning of the table body
+        tableBody.insertBefore(newRow, tableBody.firstChild);
+
+        // Remove the last row if number of rows exceeds the limit
+        if (tableBody.children.length > 100) {
+          tableBody.removeChild(tableBody.lastChild);
         }
       }
-      newRow.appendChild(valueCell);
-      // Append the new row to the beginning of the table body
-      tableBody.insertBefore(newRow, tableBody.firstChild);
-
     };
+
+    // Function to filter by coin
+    function filterByCoin() {
+      coinFilter = document.getElementById("coin-filter").value;
+      clearTable();
+    }
+
+    // Function to filter by value
+    function filterByValue() {
+      valueFilter = parseFloat(document.getElementById("value-filter").value);
+      valueFilterOperator = document.getElementById("value-filter-operator").value;
+      clearTable();
+    }
+
+    // Function to clear the table and fetch new data
+    function clearTable() {
+      var tableBody = document.getElementById('liquidations-table-body');
+      tableBody.innerHTML = ""; // Clear existing rows
+    }
   </script>
 </body>
 </html>
