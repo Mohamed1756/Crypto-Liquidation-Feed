@@ -1,16 +1,44 @@
-# Binance-Liquidation-Data
-Real-time Binance Liquidation Book: Fetch and display live liquidation data. 
-<img width="1140" alt="liq feed" src="https://github.com/Mohamed1756/Binance-Liquidation-Data/assets/56473612/2c7ee4d1-61cd-4fd2-ac2f-3dcf9e3802c5">
+# Binance Liquidations Dashboard
 
-Update:  
-Improved UI.  
-Added filter values for Coins & Values.  
+Real-time dashboard tracking liquidations on Binance Futures.
 
-To Do:  
-Make a resizable pop-up window feed.  
-Add Audio depending on value liq.  
-Add some images / icons.  
+## 🚀 Live Demo
+[View Live Demo](https://binance-liquidations.netlify.app)
 
+## ✨ Features
+- Real-time liquidation data from Binance WebSocket
+- Filtering by symbol and amount
+- Gamified exp
+- Dark/Light mode toggle
+- Responsive design
+- Statistical overview of liquidations
+- Sound notifications for large liquidations
 
-Project live at: https://binance-liquidations.netlify.app
+## ✨ TODO
+- improve audio
+- improve search function
+- allow users to customise feed to thier liking.
+- make feed resizeable & draggable. 
 
+## 🛠️ Technologies
+- React + TypeScript
+- Chakra UI
+- Zustand for state management
+- WebSocket API
+- Vite
+- Netlify for deployment
+
+## 📦 Installation
+
+```bash
+# Clone repository
+git clone https://github.com/Mohamed1756/Crypto-Liquidation-Feed/
+
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
