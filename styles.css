@@ -166,8 +166,25 @@ td:nth-child(8) {
 
 .container input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 
 /* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300&family=Oswald:wght@500&display=swap');
+
+@media screen and (max-width: 768px) {
+  .container {
+    padding: 8px;
+  }
+  
+  table {
+    min-width: 100%;
+    font-size: 14px;
+  }
+  
+  th, td {
+    white-space: nowrap;
+    padding: 8px 4px;
+  }
+}

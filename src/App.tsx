@@ -1,10 +1,9 @@
-import { ChakraProvider, Container, VStack, Heading, useColorMode, IconButton } from '@chakra-ui/react';
+import { Container, VStack, Heading, useColorMode, IconButton } from '@chakra-ui/react';
 import { SunIcon, MoonIcon } from '@chakra-ui/icons';
 import { Stats } from './components/Stats';
 import { Achievements } from './components/Achievements';
 import { LiquidationTable } from './components/LiquidationTable';
 import { WebSocketProvider } from './providers/WebSocketProvider';
-import { theme } from './theme';
 
 function App() {
   const { colorMode, toggleColorMode } = useColorMode();

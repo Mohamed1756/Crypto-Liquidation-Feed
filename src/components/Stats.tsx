@@ -1,6 +1,6 @@
 import React from 'react';
-import { Box, SimpleGrid, Stat, StatLabel, StatNumber, StatHelpText, Icon } from '@chakra-ui/react';
-import { FaTrophy, FaChartLine, FaFire } from 'react-icons/fa';
+import {SimpleGrid, Stat, StatLabel, StatNumber, StatHelpText, Icon } from '@chakra-ui/react';
+import { FaChartLine, FaFire } from 'react-icons/fa';
 import { useLiquidationStore } from '../store/liquidationStore';
 
 export const Stats: React.FC = () => {

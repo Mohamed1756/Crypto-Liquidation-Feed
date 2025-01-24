@@ -46,7 +46,7 @@ const ACHIEVEMENTS: Achievement[] = [
   }
 ];
 
-export const useLiquidationStore = create<LiquidationState>((set, get) => ({
+export const useLiquidationStore = create<LiquidationState>((set) => ({
   liquidations: [],
   totalValue: 0,
   highScore: 0,

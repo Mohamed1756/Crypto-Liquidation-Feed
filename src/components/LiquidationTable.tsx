@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Thead, Tbody, Tr, Th, Td, Box, useColorModeValue, Select, HStack, Input, IconButton, Text } from '@chakra-ui/react';
+import { Table, Thead, Tbody, Tr, Th, Td, Box, useColorModeValue, Select, HStack, Input, IconButton, Text, useBreakpointValue } from '@chakra-ui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLiquidationStore } from '../store/liquidationStore';
 import { CloseIcon } from '@chakra-ui/icons';
@@ -144,56 +144,56 @@ export const LiquidationTable: React.FC<Props> = ({ compact = false }) => {
           },
         }}
       >
-        <Table variant="simple" size={compact ? "sm" : "md"}>
-          <Thead position="sticky" top={0} zIndex={1} bg={bgColor}>
-            <Tr>
-              <Th fontSize="sm">Symbol</Th>
-              <Th fontSize="sm">Side</Th>
-              <Th fontSize="sm" isNumeric>Quantity</Th>
-              <Th fontSize="sm" isNumeric>Price</Th>
-              <Th fontSize="sm" isNumeric>Value (USDT)</Th>
-              <Th fontSize="sm">Time</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            <AnimatePresence initial={false} mode="sync">
-              {filteredLiquidations.map((liquidation, index) => (
-                <MotionTr
-                  key={`${liquidation.timestamp.toISO()}-${liquidation.symbol}-${liquidation.price}`}
-                  initial={{ opacity: 0, y: -20, scale: 1 }}
-                  animate={{ 
-                    opacity: 1, 
-                    y: 0, 
-                    scale: getAnimationScale(liquidation.value),
-                    transition: {
-                      type: "spring",
-                      duration: liquidation.value >= 100000 ? 0.5 : 0.3
-                    }
-                  }}
-                  exit={{ opacity: 0, y: 20 }}
-                  bg={liquidation.side === 'BUY' ? 'green.100' : 'red.100'}
-                  _dark={{
-                    bg: liquidation.side === 'BUY' ? 'green.900' : 'red.900',
-                  }}
-                  style={{
-                    fontWeight: liquidation.value >= 100000 ? 'bold' : 'normal'
-                  }}
-                >
-                  <Td fontWeight="bold">{liquidation.symbol}</Td>
-                  <Td color={liquidation.side === 'BUY' ? 'green.500' : 'red.500'}>
-                    {liquidation.side}
-                  </Td>
-                  <Td isNumeric>{liquidation.quantity.toFixed(4)}</Td>
-                  <Td isNumeric>{liquidation.price.toFixed(4)}</Td>
-                  <Td isNumeric fontWeight="bold">
-                    {liquidation.value.toFixed(2)}
-                  </Td>
-                  <Td>{liquidation.timestamp.toFormat('HH:mm:ss')}</Td>
-                </MotionTr>
-              ))}
-            </AnimatePresence>
-          </Tbody>
-        </Table>
+        <Box overflowX="auto" width="100%">
+          <Table variant="simple" size={compact ? "sm" : "md"}>
+            <Thead position="sticky" top={0} zIndex={1} bg={bgColor}>
+              <Tr>
+                <Th fontSize="sm">Symbol</Th>
+                <Th fontSize="sm">Side</Th>
+                <Th fontSize="sm" isNumeric display={{ base: 'none', md: 'table-cell' }}>Quantity</Th>
+                <Th fontSize="sm" isNumeric>Price</Th>
+                <Th fontSize="sm" isNumeric>Value</Th>
+                <Th fontSize="sm" display={{ base: 'none', md: 'table-cell' }}>Time</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              <AnimatePresence initial={false} mode="sync">
+                {filteredLiquidations.map((liquidation) => (
+                  <MotionTr
+                    key={`${liquidation.timestamp.toISO()}-${liquidation.symbol}-${liquidation.price}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ 
+                      opacity: 1,
+                      scale: getAnimationScale(liquidation.value),
+                      transition: {
+                        type: "spring",
+                        duration: 0.3
+                      }
+                    }}
+                    exit={{ opacity: 0 }}
+                    bg={liquidation.side === 'BUY' ? 'green.100' : 'red.100'}
+                    _dark={{
+                      bg: liquidation.side === 'BUY' ? 'green.900' : 'red.900',
+                    }}
+                    sx={{
+                      'td': {
+                        fontSize: { base: 'sm', md: 'md' },
+                        padding: { base: '8px 4px', md: '12px 16px' }
+                      }
+                    }}
+                  >
+                    <Td>{liquidation.symbol}</Td>
+                    <Td>{liquidation.side}</Td>
+                    <Td display={{ base: 'none', md: 'table-cell' }} isNumeric>{liquidation.quantity}</Td>
+                    <Td isNumeric>{liquidation.price}</Td>
+                    <Td isNumeric>{liquidation.value}</Td>
+                    <Td display={{ base: 'none', md: 'table-cell' }}>{liquidation.timestamp.toFormat('HH:mm:ss')}</Td>
+                  </MotionTr>
+                ))}
+              </AnimatePresence>
+            </Tbody>
+          </Table>
+        </Box>
       </Box>
     </Box>
   );
