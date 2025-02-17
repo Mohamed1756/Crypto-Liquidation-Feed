@@ -2,8 +2,8 @@
 
 Real-time dashboard tracking liquidations on Binance Futures.
 
-## 🚀 Live Demo
-[View Live Demo](https://binance-liquidations.netlify.app)
+## 🚀 Live Website
+[View Live Website](https://binance-liquidations.netlify.app)
 
 ## ✨ Features
 - Real-time liquidation data from Binance WebSocket
@@ -12,21 +12,14 @@ Real-time dashboard tracking liquidations on Binance Futures.
 - Dark/Light mode toggle
 - Responsive design
 - Statistical overview of liquidations
-- Sound notifications for large liquidations
+- Sound notifs for liquidations
 
 ## ✨ TODO
-- improve audio
-- improve search function
+- ~~improve audio~~
+- ~~improve search function~~
 - allow users to customise feed to thier liking.
 - make feed resizeable & draggable. 
 
-## 🛠️ Technologies
-- React + TypeScript
-- Chakra UI
-- Zustand for state management
-- WebSocket API
-- Vite
-- Netlify for deployment
 
 ## 📦 Installation
 
