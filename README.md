@@ -18,7 +18,10 @@ Real-time dashboard tracking liquidations on Binance Futures.
 - ~~improve audio~~
 - ~~improve search function~~
 - allow users to customise feed to thier liking.
-- make feed resizeable & draggable. 
+- make feed resizeable & draggable & portable. 
+- Add more Exchange feeds.
+- Improve UI on liq table.
+- more stats ? 
 
 
 ## 📦 Installation
@@ -30,8 +33,6 @@ git clone https://github.com/Mohamed1756/Crypto-Liquidation-Feed/
 # Install dependencies
 npm install
 
-# Run development server
+# Run App locally 
 npm run dev
 
-# Build for production
-npm run build
