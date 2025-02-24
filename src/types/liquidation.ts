@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon';
 
 export interface Liquidation {
+  exchange: 'BINANCE' | 'BYBIT';
   symbol: string;
   side: 'BUY' | 'SELL';
   orderType: string;

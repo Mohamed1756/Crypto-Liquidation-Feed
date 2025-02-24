@@ -12,7 +12,7 @@ function App() {
   const [soundEnabled, setSoundEnabled] = useState(true); // Manage sound state here
 
   return (
-    <WebSocketProvider>
+    <WebSocketProvider exchanges={['BINANCE', 'BYBIT']}>
       <Container maxW="container.xl" py={8}>
         <VStack spacing={8}>
           <HStack justify="space-between" width="100%" align="center">

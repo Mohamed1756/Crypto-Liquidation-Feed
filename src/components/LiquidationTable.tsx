@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Tbody, Tr,Td, Box, useColorModeValue, Select, HStack, Input, IconButton, Text, Tooltip } from '@chakra-ui/react';
+import { Table, Tbody, Tr,Td, Box, Select, HStack, Input, IconButton, Text, Tooltip } from '@chakra-ui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLiquidationStore } from '../store/liquidationStore';
 import { CloseIcon } from '@chakra-ui/icons';
@@ -16,7 +16,7 @@ interface Props {
 export const LiquidationTable: React.FC<Props> = ({ compact = false, soundEnabled }) => {
   const liquidations = useLiquidationStore((state) => state.liquidations);
   const tableRef = React.useRef<HTMLDivElement>(null);
-  const bgColor = useColorModeValue('white', 'gray.800');
+ 
 
   const [selectedCoins, setSelectedCoins] = useState<string[]>([]);
   const [filterInput, setFilterInput] = useState('');
@@ -145,7 +145,7 @@ export const LiquidationTable: React.FC<Props> = ({ compact = false, soundEnable
   );
 };
 
-const LiquidationRow: React.FC<{ liquidation: any, currentTime: number, index: number }> = ({ liquidation, currentTime, index }) => {
+const LiquidationRow: React.FC<{ liquidation: any, currentTime: number, index: number }> = ({ liquidation, currentTime }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [lastDisplayedMilestone, setLastDisplayedMilestone] = useState<number | null>(null);
 
@@ -222,20 +222,30 @@ const LiquidationRow: React.FC<{ liquidation: any, currentTime: number, index: n
       onMouseLeave={() => setIsHovered(false)}
     >
     <Td width="25%">
-        <HStack spacing="2">
-          {/* Add the Binance logo here */}
-          <img 
-            src="/bnb.svg" 
-            alt="Binance" 
-            width="14" 
-            height="14" 
-            style={{ opacity: 1 }} 
-          />
-          <Text {...(isHighValue ? highValueStyle : regularStyle)}>
-            {formatSymbol(liquidation.symbol)}
-          </Text>
-        </HStack>
-      </Td>
+      <HStack spacing="2">
+      {liquidation.exchange === 'BINANCE' ? (
+    <img 
+      src="/bnb.svg" 
+      alt="Binance" 
+      width="14" 
+      height="14" 
+      style={{ opacity: 1 }} 
+    />
+  ) : liquidation.exchange === 'BYBIT' && (
+    <img 
+      src="/bybit.svg" 
+      alt="Bybit" 
+      width="14" 
+      height="14" 
+      style={{ opacity: 0.8 }} 
+    />
+  )}
+
+        <Text {...(isHighValue ? highValueStyle : regularStyle)}>
+          {formatSymbol(liquidation.symbol)}
+        </Text>
+      </HStack>
+    </Td>
       <Td isNumeric width="25%">
         <Text {...(isHighValue ? highValueStyle : regularStyle)}>
           {formatNumber(liquidation.price, true)} {/* Pass true for price formatting */}
