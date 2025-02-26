@@ -28,14 +28,12 @@ export const LiquidationTable: React.FC<Props> = ({ compact = false, soundEnable
       secondPart: [1000, 1000], // Adjust the start time and duration as needed
     },
   });
-
   const sortedLiquidations = useMemo(() => 
     [...liquidations].sort((a, b) => 
       b.timestamp.toMillis() - a.timestamp.toMillis()
     ),
     [liquidations]
   );
-
   const availableCoins = useMemo(() => 
     Array.from(new Set(liquidations.map(l => l.symbol)))
     .sort(),
@@ -187,7 +185,9 @@ const LiquidationRow: React.FC<{ liquidation: any, currentTime: number, index: n
 
   // Remove USDT suffix from symbol
   const formatSymbol = (symbol: string) => {
-    return symbol.replace('USDT', '');
+    return symbol
+      .replace('USDT', '')    // Remove USDT
+      .replace(/--?SWAP/, ''); // Remove -SWAP or --SWAP
   };
   
 
@@ -222,30 +222,38 @@ const LiquidationRow: React.FC<{ liquidation: any, currentTime: number, index: n
       onMouseLeave={() => setIsHovered(false)}
     >
     <Td width="25%">
-      <HStack spacing="2">
-      {liquidation.exchange === 'BINANCE' ? (
-    <img 
-      src="/bnb.svg" 
-      alt="Binance" 
-      width="14" 
-      height="14" 
-      style={{ opacity: 1 }} 
-    />
-  ) : liquidation.exchange === 'BYBIT' && (
-    <img 
-      src="/bybit.svg" 
-      alt="Bybit" 
-      width="14" 
-      height="14" 
-      style={{ opacity: 0.8 }} 
-    />
-  )}
+  <HStack spacing="2">
+    {liquidation.exchange === 'BINANCE' ? (
+      <img 
+        src="/bnb.svg" 
+        alt="Binance" 
+        width="14" 
+        height="14" 
+        style={{ opacity: 1 }} 
+      />
+    ) : liquidation.exchange === 'BYBIT' ? (
+      <img 
+        src="/bybit.svg" 
+        alt="Bybit" 
+        width="14" 
+        height="14" 
+        style={{ opacity: 0.8 }} 
+      />
+    ) : liquidation.exchange === 'OKX' ? (
+      <img 
+        src="/okx.svg" 
+        alt="OKX" 
+        width="14" 
+        height="14" 
+        style={{ opacity: 0.8 }} 
+      />
+    ) : null}
+    <Text {...(isHighValue ? highValueStyle : regularStyle)}>
+      {formatSymbol(liquidation.symbol)}
+    </Text>
+  </HStack>
+</Td>
 
-        <Text {...(isHighValue ? highValueStyle : regularStyle)}>
-          {formatSymbol(liquidation.symbol)}
-        </Text>
-      </HStack>
-    </Td>
       <Td isNumeric width="25%">
         <Text {...(isHighValue ? highValueStyle : regularStyle)}>
           {formatNumber(liquidation.price, true)} {/* Pass true for price formatting */}

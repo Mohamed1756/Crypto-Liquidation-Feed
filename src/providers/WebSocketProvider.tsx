@@ -1,83 +1,136 @@
 import React, { useEffect } from 'react';
 import { DateTime } from 'luxon';
 import { useLiquidationStore } from '../store/liquidationStore';
-
+import { useBybitSymbols } from './BybitSymbols';
+import { Liquidation } from '../types/liquidation';
 
 const ENDPOINTS = {
   BINANCE: 'wss://fstream.binance.com/ws/!forceOrder@arr',
-  BYBIT: 'wss://stream.bybit.com/v5/public/linear'
+  BYBIT: 'wss://stream.bybit.com/v5/public/linear',
+  OKX: 'wss://ws.okx.com:8443/ws/v5/public',
 };
 
-// Update the interface to match actual Bybit message structure
 interface BybitLiquidation {
   topic: string;
   type: string;
   ts: number;
   data: [{
-    T: number;      // Timestamp
-    s: string;      // Symbol
-    S: string;      // Side
-    v: string;      // Volume/Size
-    p: string;      // Price
+    T: number;
+    s: string;
+    S: string;
+    v: string;
+    p: string;
   }];
+}
+
+interface OkxLiquidation {
+  arg: {
+    channel: string;
+    instType: string;
+  };
+  data: Array<{
+    details: Array<{
+      bkLoss: string;
+      bkPx: string;
+      ccy: string;
+      posSide: 'long' | 'short';
+      side: 'buy' | 'sell';
+      sz: string;
+      ts: string;
+    }>;
+    instFamily: string;
+    instId: string;
+    instType: string;
+    uly: string;
+  }>;
 }
 
 export const WebSocketProvider: React.FC<{ 
   children: React.ReactNode,
-  exchanges?: ('BINANCE' | 'BYBIT')[]
+  exchanges?: ('BINANCE' | 'BYBIT' | 'OKX')[]
 }> = ({ 
   children, 
-  exchanges = ['BINANCE', 'BYBIT']
+  exchanges = ['BINANCE', 'BYBIT', 'OKX']
 }) => {
   const addLiquidation = useLiquidationStore((state) => state.addLiquidation);
-  
+  const bybitSymbols = useBybitSymbols();
 
   useEffect(() => {
-    // Define connections map inside useEffect
-    const connections = new Map();
+    console.log('WebSocketProvider useEffect running with exchanges:', exchanges);
 
-    // Connect to each exchange
+    const connections = new Map<string, WebSocket>();
+    const pingIntervals = new Map<string, NodeJS.Timeout>();
+
     exchanges.forEach(exchange => {
-      const ws = new WebSocket(ENDPOINTS[exchange]);
+      console.log(`Attempting to create WebSocket for ${exchange} at ${ENDPOINTS[exchange]}`);
+      
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(ENDPOINTS[exchange]);
+      } catch (error) {
+        console.error(`Failed to instantiate WebSocket for ${exchange}:`, error);
+        return;
+      }
 
-      // Setup connection handlers
       ws.onopen = () => {
-        console.log(`${exchange} connected`);
+        console.log(`${exchange} WebSocket connected`);
         if (exchange === 'BYBIT') {
-          // Subscribe using correct topic prefix
+          const subscriptionArgs = bybitSymbols.map(symbol => `allLiquidation.${symbol}`);
+          console.log('BYBIT sending subscription:', subscriptionArgs);
           ws.send(JSON.stringify({
             op: 'subscribe',
-            args: [
-              'allLiquidation.BTCUSDT',
-              'allLiquidation.ETHUSDT',
-              'allLiquidation.SOLUSDT',
-              'allLiquidation.KAITOUSDT',
-            ]
+            args: subscriptionArgs
           }));
+        } else if (exchange === 'OKX') {
+          const subscription = {
+            op: 'subscribe',
+            args: [{
+              channel: 'liquidation-orders',
+              instType: 'SWAP'
+            }]
+          };
+          console.log('OKX sending subscription:', JSON.stringify(subscription));
+          ws.send(JSON.stringify(subscription));
+
+          const pingInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              console.log('OKX sending ping...');
+              ws.send('ping');
+            }
+          }, 29000);
+          pingIntervals.set(exchange, pingInterval);
         }
       };
 
       ws.onclose = () => {
-        console.log(`${exchange} connection closed`);
+        console.log(`${exchange} WebSocket closed`);
+        const interval = pingIntervals.get(exchange);
+        if (interval) clearInterval(interval);
       };
 
       ws.onerror = (error) => {
-        console.error(`${exchange} error:`, error);
+        console.error(`${exchange} WebSocket error:`, error);
       };
 
-      // Add message handler
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
-          console.log(`${exchange} received:`, data); // Debug log
+          const message = event.data.toString();
+          console.log(`${exchange} received raw message:`, message);
 
-          let liquidation;
+          if (exchange === 'OKX' && message === 'pong') {
+            console.log('OKX pong received');
+            return;
+          }
+
+          const data = JSON.parse(message);
+          let liquidation: Liquidation | undefined;
+
           if (exchange === 'BINANCE') {
             const msg = data.o;
             liquidation = {
-              exchange: 'BINANCE' as 'BINANCE',
+              exchange: 'BINANCE',
               symbol: msg.s,
-              side: msg.S,
+              side: msg.S as 'BUY' | 'SELL',
               orderType: msg.o,
               quantity: parseFloat(msg.q),
               price: parseFloat(msg.ap),
@@ -86,22 +139,18 @@ export const WebSocketProvider: React.FC<{
               value: parseFloat(msg.q) * parseFloat(msg.ap),
             };
           } else if (exchange === 'BYBIT') {
-            // Type check the message
             const bybitMsg = data as BybitLiquidation;
-            
             if (bybitMsg.topic?.includes('allLiquidation') && bybitMsg.data?.[0]) {
               const msg = bybitMsg.data[0];
-              
-              // Validate required fields using new structure
               if (!msg.s || !msg.S || !msg.v || !msg.p) {
                 console.warn('Invalid Bybit message structure:', msg);
                 return;
               }
-
+              const side = msg.S.toUpperCase() === 'BUY' ? 'SELL' : 'BUY';
               liquidation = {
-                exchange: 'BYBIT' as 'BYBIT',
+                exchange: 'BYBIT',
                 symbol: msg.s,
-                side: msg.S.toUpperCase() as 'BUY' | 'SELL',
+                side: side as 'BUY' | 'SELL',
                 orderType: 'LIMIT',
                 quantity: parseFloat(msg.v),
                 price: parseFloat(msg.p),
@@ -110,25 +159,52 @@ export const WebSocketProvider: React.FC<{
                 value: parseFloat(msg.v) * parseFloat(msg.p),
               };
             }
+          } else if (exchange === 'OKX') {
+            console.log('OKX processing data:', data);
+            if ('event' in data && data.event === 'subscribe') {
+              console.log('OKX subscription confirmed:', data.arg);
+              return;
+            }
+            const okxMsg = data as OkxLiquidation;
+            if (okxMsg.arg?.channel === 'liquidation-orders' && okxMsg.data?.[0]?.details?.[0]) {
+              const detail = okxMsg.data[0].details[0];
+              const instrument = okxMsg.data[0];
+              const side = detail.posSide === 'short' ? 'BUY' : 'SELL';
+              liquidation = {
+                exchange: 'OKX',
+                symbol: instrument.instId,
+                side: side as 'BUY' | 'SELL',
+                orderType: 'MARKET',
+                quantity: parseFloat(detail.sz),
+                price: parseFloat(detail.bkPx),
+                orderStatus: 'FILLED',
+                timestamp: DateTime.fromMillis(parseInt(detail.ts)),
+                value: parseFloat(detail.sz) * parseFloat(detail.bkPx),
+              };
+              console.log('OKX parsed liquidation:', liquidation);
+            } else {
+              console.log('OKX no liquidation data found:', okxMsg);
+            }
           }
 
           if (liquidation) {
+            console.log(`${exchange} adding liquidation to store:`, liquidation);
             addLiquidation(liquidation);
           }
         } catch (error) {
-          console.error(`${exchange} message error:`, error);
+          console.error(`${exchange} message parsing error:`, error);
         }
       };
 
-      // Store connection
       connections.set(exchange, ws);
     });
 
-    // Cleanup
     return () => {
+      console.log('Cleaning up WebSocket connections');
       connections.forEach(ws => ws.close());
+      pingIntervals.forEach(interval => clearInterval(interval));
     };
-  }, [addLiquidation, exchanges]); // Remove bybitSymbols dependency
+  }, [addLiquidation, exchanges, bybitSymbols]);
 
   return <>{children}</>;
 };
