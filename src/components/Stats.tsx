@@ -17,10 +17,10 @@ export const Stats: React.FC = () => {
         rounded="lg"
       >
       <StatLabel fontWeight="medium" display="flex" alignItems="center">
-  <Icon as={FaChartLine} mr={2} /> Total Value
+  <Icon as={FaChartLine} mr={2} /> Total Value $
 </StatLabel>
 <StatNumber fontSize="2xl">
-  {Math.round(totalValue).toLocaleString()} USDT
+  {Math.round(totalValue).toLocaleString()} 
 </StatNumber>
 <StatHelpText>High Score: {highScore.toFixed(2).toLocaleString()} USDT</StatHelpText>
     </Stat>

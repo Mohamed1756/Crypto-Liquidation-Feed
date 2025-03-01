@@ -34,7 +34,7 @@ function App() {
             </FormControl>
           </HStack>
 
-          <Heading size="xl">Binance Liquidation Feed</Heading>
+          <Heading size="xl">Crypto Liquidation Feed</Heading>
           <Stats />
           <Achievements />
           <LiquidationTable soundEnabled={soundEnabled} /> {/* Pass soundEnabled as prop */}
