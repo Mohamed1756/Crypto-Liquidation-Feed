@@ -1,26 +1,31 @@
-# Binance Liquidations Dashboard
+# Crypto Liquidation Feed 
 
-Real-time dashboard tracking liquidations on Binance Futures.
+Real-time dashboard tracking crypto liquidations.
 
 ## 🚀 Live Website
 [View Live Website](https://binance-liquidations.netlify.app)
 
 ## ✨ Features
-- Real-time liquidation data from Binance WebSocket
-- Filtering by symbol and amount
+- Live liquidation data for crypto perpetuals
+- Filter by symbol and amount
 - Gamified exp
 - Dark/Light mode toggle
 - Responsive design
 - Statistical overview of liquidations
 - Sound notifs for liquidations
 
+## ✨ SUPPORTED EXCHANGES 
+- Binance 
+- Bybit
+- OKX 
+
 ## ✨ TODO
 - ~~improve audio~~
 - ~~improve search function~~
-- allow users to customise feed to thier liking.
+- ~~allow users to customise feed to thier liking~~
 - make feed resizeable & draggable & portable. 
-- Add more Exchange feeds.
-- Improve UI on liq table.
+- ~~Add more Exchange feeds~~
+- ~~Improve UI on liq table~~
 - more stats ? 
 
 
