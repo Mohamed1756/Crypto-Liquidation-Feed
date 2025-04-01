@@ -315,12 +315,12 @@ export const WhaleAlertTable: React.FC<Props> = React.memo(({
                         </Flex>
                       </Td>
                       <Td isNumeric py={1.5} px={2} width="35%">
-                        <Tooltip 
-                          label={`${liquidation.side === 'BUY' ? 'Long' : 'Short'} liquidated at $${liquidation.price.toLocaleString()}`} 
-                          hasArrow
-                          placement="top"
-                          openDelay={500}
-                        >
+                      <Tooltip 
+  label={`${liquidation.side === 'SELL' ? 'Long' : 'Short'} liquidated at $${liquidation.price.toLocaleString()}`} 
+  hasArrow
+  placement="top"
+  openDelay={500}
+>
                           <Text 
                             fontWeight="600" 
                             fontSize="xs"

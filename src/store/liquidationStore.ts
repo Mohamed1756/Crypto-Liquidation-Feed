@@ -41,7 +41,7 @@ const ACHIEVEMENTS: Achievement[] = [
   {
     id: 'balanced_view',
     title: '⚖️ Balanced View',
-    description: 'See equal number of buy/sell liquidations (min 10 each)',
+    description: 'See equal number buy/sell liquidations (min 10 each)',
     unlocked: false
   }
 ];

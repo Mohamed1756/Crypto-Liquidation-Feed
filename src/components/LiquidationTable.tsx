@@ -18,7 +18,9 @@ const MotionTr = motion(Tr);
 
 interface Props {
   compact?: boolean;
-  soundEnabled: boolean;  
+  soundEnabled: boolean; 
+  onNewLiquidation: (data: { amount: number; symbol: string }) => void;
+
 }
 
 export const LiquidationTable: React.FC<Props> = ({ compact = false, soundEnabled }) => {

@@ -19,9 +19,7 @@ export const Achievements: React.FC = () => {
 
   return (
     <Box p={4} bg={bgColor} rounded="lg" shadow="lg" width="100%">
-      <Text fontSize="xl" fontWeight="bold" mb={4}>
-        Achievements
-      </Text>
+    
       <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={4}>
         {achievements.map((achievement) => (
           <MotionBox
