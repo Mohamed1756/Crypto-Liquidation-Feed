@@ -5,6 +5,9 @@ Real-time dashboard tracking crypto liquidations.
 ## 🚀 Live Website
 [View Live Website](https://binance-liquidations.netlify.app)
 
+<img src="https://github.com/user-attachments/assets/ab7f564e-7509-4a29-b81b-657eab833e29" width="500" />
+
+
 ## ✨ Features
 - Live liquidation data for crypto perpetuals
 - Filter by symbol and amount
