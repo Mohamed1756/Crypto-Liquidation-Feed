@@ -92,12 +92,13 @@ export const WebSocketProvider: React.FC<{
           console.log('OKX sending subscription:', JSON.stringify(subscription));
           ws.send(JSON.stringify(subscription));
 
+          // Set up ping (using simple string 'ping' as per your friend's working code)
           const pingInterval = setInterval(() => {
             if (ws.readyState === WebSocket.OPEN) {
               console.log('OKX sending ping...');
               ws.send('ping');
             }
-          }, 29000);
+          }, 25000);
           pingIntervals.set(exchange, pingInterval);
         }
       };
@@ -117,6 +118,7 @@ export const WebSocketProvider: React.FC<{
           const message = event.data.toString();
           console.log(`${exchange} received raw message:`, message);
 
+          // Handle OKX pong response (as plain string)
           if (exchange === 'OKX' && message === 'pong') {
             console.log('OKX pong received');
             return;
@@ -127,17 +129,19 @@ export const WebSocketProvider: React.FC<{
 
           if (exchange === 'BINANCE') {
             const msg = data.o;
-            liquidation = {
-              exchange: 'BINANCE',
-              symbol: msg.s,
-              side: msg.S as 'BUY' | 'SELL',
-              orderType: msg.o,
-              quantity: parseFloat(msg.q),
-              price: parseFloat(msg.ap),
-              orderStatus: msg.X,
-              timestamp: DateTime.fromMillis(parseInt(msg.T)),
-              value: parseFloat(msg.q) * parseFloat(msg.ap),
-            };
+            if (msg) {
+              liquidation = {
+                exchange: 'BINANCE',
+                symbol: msg.s,
+                side: msg.S as 'BUY' | 'SELL',
+                orderType: msg.o,
+                quantity: parseFloat(msg.q),
+                price: parseFloat(msg.ap),
+                orderStatus: msg.X,
+                timestamp: DateTime.fromMillis(parseInt(msg.T)),
+                value: parseFloat(msg.q) * parseFloat(msg.ap),
+              };
+            }
           } else if (exchange === 'BYBIT') {
             const bybitMsg = data as BybitLiquidation;
             if (bybitMsg.topic?.includes('allLiquidation') && bybitMsg.data?.[0]) {
@@ -161,15 +165,24 @@ export const WebSocketProvider: React.FC<{
             }
           } else if (exchange === 'OKX') {
             console.log('OKX processing data:', data);
+            
+            // Handle subscription confirmation
             if ('event' in data && data.event === 'subscribe') {
               console.log('OKX subscription confirmed:', data.arg);
               return;
             }
+            
+            // Process liquidation data with the correct structure
             const okxMsg = data as OkxLiquidation;
             if (okxMsg.arg?.channel === 'liquidation-orders' && okxMsg.data?.[0]?.details?.[0]) {
               const detail = okxMsg.data[0].details[0];
               const instrument = okxMsg.data[0];
+              
+              // Convert position side to order side
+              // When a long position is liquidated, the exchange performs a sell
+              // When a short position is liquidated, the exchange performs a buy
               const side = detail.posSide === 'short' ? 'BUY' : 'SELL';
+              
               liquidation = {
                 exchange: 'OKX',
                 symbol: instrument.instId,
@@ -183,7 +196,7 @@ export const WebSocketProvider: React.FC<{
               };
               console.log('OKX parsed liquidation:', liquidation);
             } else {
-              console.log('OKX no liquidation data found:', okxMsg);
+              console.log('OKX no liquidation data found in structure:', okxMsg);
             }
           }
 
