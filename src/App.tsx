@@ -8,6 +8,7 @@ import {
   VStack,
   IconButton,
   Button,
+  ButtonGroup,
   useColorMode,
   useColorModeValue,
   Switch,
@@ -342,21 +343,161 @@ function App() {
     }
   };
 // Helper function for arbitrage calculation
-const calculateArbitrage = (rates: FundingRate[], coin: string) => {
+// Funding rates period type
+type FundingPeriod = '8h' | '1d' | '7d' | '30d' | '180d' | '1y';
+
+// Extended FundingRate type for adjusted rates
+interface AdjustedFundingRate extends FundingRate {
+  adjustedFundingRate: number;
+}
+
+// State for funding period
+const [fundingPeriod, setFundingPeriod] = useState<FundingPeriod>('8h');
+
+// Calculate adjusted funding rates based on period
+const adjustedFundingRates = useMemo(() => {
+  const periodsIn8h: Record<FundingPeriod, number> = {
+    '8h': 1,
+    '1d': 3, // 24h / 8h = 3
+    '7d': 3 * 7, // 7 days * 3 periods/day
+    '30d': 3 * 30, // 30 days * 3 periods/day
+    '180d': 3 * 180, // 180 days * 3 periods/day
+    '1y': 3 * 365, // 365 days * 3 periods/day
+  };
+
+  return fundingRates.map(rate => {
+    let baseRate = rate.lastFundingRate;
+    // Adjust Hyperliquid's 1h rate to 8h
+    if (rate.exchange === 'Hyperliquid') {
+      baseRate *= 8;
+    }
+    // Scale to selected period
+    const adjustedRate = baseRate * periodsIn8h[fundingPeriod];
+    return {
+      ...rate,
+      adjustedFundingRate: adjustedRate,
+    };
+  });
+}, [fundingRates, fundingPeriod]);
+
+// Helper function for arbitrage calculation
+// Add sorting state at the top of your component
+const [sortConfig, setSortConfig] = useState<{
+  key: 'coin' | 'exchange' | 'adjustedFundingRate' | 'arbitrage';
+  direction: 'asc' | 'desc';
+}>({ key: 'coin', direction: 'asc' });
+
+// Sorting function
+const sortedFundingRates = useMemo(() => {
+  const sortableItems = [...adjustedFundingRates];
+  if (sortConfig.key === 'coin') {
+    sortableItems.sort((a, b) => {
+      const comparison = a.coin.localeCompare(b.coin);
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  } else if (sortConfig.key === 'exchange') {
+    sortableItems.sort((a, b) => {
+      // Define a custom order for exchanges if you want
+      const exchangeOrder = ['Binance', 'Bybit', 'OKX', 'Hyperliquid'];
+      const aIndex = exchangeOrder.indexOf(a.exchange);
+      const bIndex = exchangeOrder.indexOf(b.exchange);
+      
+      // If both are in our custom order, sort by that
+      if (aIndex !== -1 && bIndex !== -1) {
+        return sortConfig.direction === 'asc' 
+          ? aIndex - bIndex 
+          : bIndex - aIndex;
+      }
+      
+      // Otherwise fall back to alphabetical
+      const comparison = a.exchange.localeCompare(b.exchange);
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  } else if (sortConfig.key === 'adjustedFundingRate') {
+    sortableItems.sort((a, b) => {
+      const comparison = a.adjustedFundingRate - b.adjustedFundingRate;
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  } else if (sortConfig.key === 'arbitrage') {
+    // For arbitrage, we need to calculate the diff first
+    sortableItems.sort((a, b) => {
+      const aArbitrage = calculateArbitrageDiff(adjustedFundingRates, a.coin);
+      const bArbitrage = calculateArbitrageDiff(adjustedFundingRates, b.coin);
+      
+      // Handle cases where arbitrage might be null
+      const aValue = aArbitrage !== null ? Math.abs(aArbitrage) : -Infinity;
+      const bValue = bArbitrage !== null ? Math.abs(bArbitrage) : -Infinity;
+      
+      const comparison = aValue - bValue;
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }
+  return sortableItems;
+}, [adjustedFundingRates, sortConfig]);
+
+// Helper function to calculate arbitrage diff (extracted from your existing calculateArbitrage)
+const calculateArbitrageDiff = (rates: AdjustedFundingRate[], coin: string): number | null => {
   const coinRates = rates.filter(r => r.coin === coin);
   if (coinRates.length < 2) return null;
-  const highest = coinRates.reduce((max, r) => (r.lastFundingRate > max.lastFundingRate ? r : max), coinRates[0]);
-  const lowest = coinRates.reduce((min, r) => (r.lastFundingRate < min.lastFundingRate ? r : min), coinRates[0]);
-  const diff = highest.lastFundingRate - lowest.lastFundingRate;
-  if (Math.abs(diff) < 0.01) return null;
-  return (
-    <Text color={diff > 0 ? 'blue.400' : 'gray.400'} fontSize="sm">
-      <Text as="span" fontWeight="medium">{diff.toFixed(4)}%</Text>
-      <Text as="span" color={mutedText} ml={1}>
-        ({lowest.exchange} → {highest.exchange})
-      </Text>
-    </Text>
+  const highest = coinRates.reduce(
+    (max, r) => (r.adjustedFundingRate > max.adjustedFundingRate ? r : max),
+    coinRates[0]
   );
+  const lowest = coinRates.reduce(
+    (min, r) => (r.adjustedFundingRate < min.adjustedFundingRate ? r : min),
+    coinRates[0]
+  );
+  return highest.adjustedFundingRate - lowest.adjustedFundingRate;
+};
+
+
+
+// Modified calculateArbitrage to use the diff
+const calculateArbitrage = (rates: AdjustedFundingRate[], coin: string) => {
+  const diff = calculateArbitrageDiff(rates, coin);
+  if (diff === null || Math.abs(diff) < 0.01) return null;
+
+  const coinRates = rates.filter(r => r.coin === coin);
+  const highest = coinRates.reduce(
+    (max, r) => (r.adjustedFundingRate > max.adjustedFundingRate ? r : max),
+    coinRates[0]
+  );
+  const lowest = coinRates.reduce(
+    (min, r) => (r.adjustedFundingRate < min.adjustedFundingRate ? r : min),
+    coinRates[0]
+  );
+
+  return (
+    <Tooltip
+      label={`Long on ${lowest.exchange} (pay/receive ${lowest.adjustedFundingRate.toFixed(4)}%), Short on ${highest.exchange} (receive/pay ${highest.adjustedFundingRate.toFixed(4)}%)`}
+      placement="top"
+      hasArrow
+    >
+      <VStack spacing={1} align="center">
+        <Badge
+          colorScheme={diff > 0 ? 'blue' : 'gray'}
+          variant="subtle"
+          fontSize="sm"
+          px={2}
+          py={1}
+        >
+          {diff.toFixed(4)}%
+        </Badge>
+        <Text fontSize="xs" color={mutedText}>
+          Long {lowest.exchange} → Short {highest.exchange}
+        </Text>
+      </VStack>
+    </Tooltip>
+  );
+};
+
+// Function to request sort
+const requestSort = (key: 'coin' | 'exchange' | 'adjustedFundingRate' | 'arbitrage') => {
+  let direction: 'asc' | 'desc' = 'asc';
+  if (sortConfig.key === key && sortConfig.direction === 'asc') {
+    direction = 'desc';
+  }
+  setSortConfig({ key, direction });
 };
   // Apply status properties
   const statusProps = getConnectionStatusProps();
@@ -782,7 +923,7 @@ const calculateArbitrage = (rates: FundingRate[], coin: string) => {
                   transition="all 0.2s"
                   _hover={{ boxShadow: 'md' }}
                 >
-                  <Tabs position="relative" variant="unstyled" colorScheme={themeAccent}>
+<Tabs position="relative" variant="unstyled" colorScheme={themeAccent}>
   <TabList>
     <Tab _selected={{ color: accentColor, fontWeight: "medium" }}>Liquidation Feed</Tab>
     <Tab _selected={{ color: accentColor, fontWeight: "medium" }}>Achievements</Tab>
@@ -811,9 +952,11 @@ const calculateArbitrage = (rates: FundingRate[], coin: string) => {
               p={1}
               borderRadius="md"
               cursor="pointer"
-              onClick={() => document.querySelector('.chakra-menu__menu-button')?.dispatchEvent(
-                new MouseEvent('click', { bubbles: true })
-              )}
+              onClick={() =>
+                document.querySelector('.chakra-menu__menu-button')?.dispatchEvent(
+                  new MouseEvent('click', { bubbles: true })
+                )
+              }
             >
               {selectedExchanges.length} Exchanges
             </Badge>
@@ -841,10 +984,7 @@ const calculateArbitrage = (rates: FundingRate[], coin: string) => {
             endColor={`${themeAccent}.500`}
           />
         ) : (
-          <LiquidationTable
-            soundEnabled={soundEnabled}
-            onNewLiquidation={handleNewLiquidation}
-          />
+          <LiquidationTable soundEnabled={soundEnabled} onNewLiquidation={handleNewLiquidation} />
         )}
       </Fade>
     </TabPanel>
@@ -884,6 +1024,22 @@ const calculateArbitrage = (rates: FundingRate[], coin: string) => {
           </Tooltip>
         </HStack>
       </Flex>
+      <Flex mb={4} flexDirection={{ base: 'column', sm: 'row' }} gap={2} alignItems={{ base: 'stretch', sm: 'center' }}>
+        <ButtonGroup size="sm" isAttached variant="outline" colorScheme={themeAccent}>
+          {['8h', '1d', '7d', '30d', '180d', '1y'].map(period => (
+            <Button
+              key={period}
+              onClick={() => setFundingPeriod(period as FundingPeriod)}
+              isActive={fundingPeriod === period}
+              _active={{ bg: `${themeAccent}.500`, color: 'white' }}
+              flex={1}
+            >
+              {period}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Spacer />
+      </Flex>
       <Fade in={!fundingLoading} transition={{ enter: { duration: 0.5 } }}>
         {fundingError ? (
           <Alert status="error" borderRadius="md">
@@ -900,39 +1056,80 @@ const calculateArbitrage = (rates: FundingRate[], coin: string) => {
             startColor={`${themeAccent}.100`}
             endColor={`${themeAccent}.500`}
           />
-        ) : fundingRates.length > 0 ? (
+        ) : adjustedFundingRates.length > 0 ? (
           <Box overflowX="auto">
-            <Table variant="simple" colorScheme={themeAccent}>
-              <Thead>
-                <Tr>
-                  <Th color={accentColor}>Coin</Th>
-                  <Th color={accentColor}>Exchange</Th>
-                  <Th color={accentColor}>Funding Rate</Th>
-                  <Th color={accentColor}>Next Funding</Th>
-                  <Th color={accentColor}>Arbitrage</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {fundingRates.map((rate, index) => (
-                  <Tr key={`${rate.symbol}-${rate.exchange}-${index}`}>
-                    <Td>{rate.coin}</Td>
-                    <Td>{rate.exchange}</Td>
-                    <Td color={rate.lastFundingRate >= 0 ? 'green.400' : 'red.400'}>
-                      {(rate.lastFundingRate >= 0 ? '+' : '') +
-                        rate.lastFundingRate.toFixed(4) +
-                        '%'}
-                    </Td>
-                    <Td>{new Date(rate.nextFundingTime).toLocaleTimeString()}</Td>
-                    <Td>
-                      {calculateArbitrage(fundingRates, rate.coin) || (
-                        <Text color={mutedText}>-</Text>
-                      )}
-                    </Td>
-                  </Tr>
+          <Table variant="simple" colorScheme={themeAccent}>
+            <Thead>
+              <Tr>
+                <Th 
+                  color={accentColor} 
+                  cursor="pointer" 
+                  onClick={() => requestSort('coin')}
+                  _hover={{ bg: 'gray.100' }}
+                >
+                  Coin
+                  {sortConfig.key === 'coin' && (
+                    <span>{sortConfig.direction === 'asc' ? ' ↑' : ' ↓'}</span>
+                  )}
+                </Th>
+                {['Binance', 'Bybit', 'OKX', 'Hyperliquid'].map(exchange => (
+                  <Th 
+                    key={exchange}
+                    color={accentColor}
+                    textAlign="center"
+                  >
+                    {exchange}
+                  </Th>
                 ))}
-              </Tbody>
-            </Table>
-          </Box>
+                <Th 
+                  color={accentColor}
+                  textAlign="center"
+                >
+                  Arbitrage
+                </Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+  {Array.from(new Set(sortedFundingRates.map(rate => rate.coin))).map(coin => {
+    const coinRates = sortedFundingRates.filter(rate => rate.coin === coin);
+    const exchangeRates: Record<string, AdjustedFundingRate> = {};
+    
+    coinRates.forEach(rate => {
+      exchangeRates[rate.exchange] = rate;
+    });
+    
+    return (
+      <Tr key={coin}>
+        <Td fontWeight="medium">{coin}</Td>
+        {['Binance', 'Bybit', 'OKX', 'Hyperliquid'].map(exchange => {
+          const rate = exchangeRates[exchange];
+          return (
+            <Td 
+              key={`${coin}-${exchange}`} 
+              textAlign="center"
+              color={
+                rate ? 
+                  (rate.adjustedFundingRate >= 0 ? 'green.400' : 'red.400') : 
+                  mutedText
+              }
+            >
+              {rate ? 
+                `${rate.adjustedFundingRate >= 0 ? '+' : ''}${rate.adjustedFundingRate.toFixed(4)}%` : 
+                '-'}
+            </Td>
+          );
+        })}
+        <Td textAlign="center">
+          {calculateArbitrage(adjustedFundingRates, coin) || (
+            <Text color={mutedText}>-</Text>
+          )}
+        </Td>
+      </Tr>
+    );
+  })}
+</Tbody>
+          </Table>
+        </Box>
         ) : (
           <Text color={mutedText} textAlign="center" py={8}>
             No funding rate data available
