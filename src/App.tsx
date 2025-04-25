@@ -77,7 +77,7 @@ import {
 } from '@chakra-ui/icons';
 import { FaDiscord } from 'react-icons/fa';
 import { keyframes } from '@emotion/react';
-import { Achievements } from './components/Achievements';
+import { MarketInformation } from './components/MarketInformation';
 import { LiquidationTable } from './components/LiquidationTable';
 import { WebSocketProvider } from './providers/WebSocketProvider';
 import { useLiquidationStore } from './store/liquidationStore';
@@ -926,7 +926,7 @@ const requestSort = (key: 'coin' | 'exchange' | 'adjustedFundingRate' | 'arbitra
 <Tabs position="relative" variant="unstyled" colorScheme={themeAccent}>
   <TabList>
     <Tab _selected={{ color: accentColor, fontWeight: "medium" }}>Liquidation Feed</Tab>
-    <Tab _selected={{ color: accentColor, fontWeight: "medium" }}>Achievements</Tab>
+    <Tab _selected={{ color: accentColor, fontWeight: "medium" }}>Market Info</Tab>
     <Tab _selected={{ color: accentColor, fontWeight: "medium" }}>Funding Rates</Tab>
   </TabList>
   <TabIndicator mt="-1.5px" height="2px" bg={accentColor} borderRadius="1px" />
@@ -989,23 +989,23 @@ const requestSort = (key: 'coin' | 'exchange' | 'adjustedFundingRate' | 'arbitra
       </Fade>
     </TabPanel>
 
-    {/* Achievements Panel */}
+    {/* Market information Panel */}
     <TabPanel px={0} pt={4}>
-      <Flex align="center" mb={4}>
-        <Text fontSize="lg" fontWeight="bold" color={accentColor}>Achievements</Text>
-        <Spacer />
-        <Tooltip label="This feature is in beta testing">
-          <Badge colorScheme="yellow" fontSize="xs" p={1} borderRadius="md">Beta</Badge>
-        </Tooltip>
-      </Flex>
-      <Fade in={!isLoading} transition={{ enter: { duration: 0.5 } }}>
-        {isLoading ? (
-          <Skeleton height="150px" borderRadius="md" startColor="yellow.100" endColor="yellow.500" />
-        ) : (
-          <Achievements />
-        )}
-      </Fade>
-    </TabPanel>
+  <Flex align="center" mb={4}>
+    <Text fontSize="lg" fontWeight="bold" color={accentColor}>Market Information</Text>
+    <Spacer />
+    <Tooltip label="Data refreshes every 5 minutes">
+      <Badge colorScheme="blue" fontSize="xs" p={1} borderRadius="md">Auto-refresh</Badge>
+    </Tooltip>
+  </Flex>
+  <Fade in={!isLoading} transition={{ enter: { duration: 0.5 } }}>
+    {isLoading ? (
+      <Skeleton height="150px" borderRadius="md" startColor={`${themeAccent}.100`} endColor={`${themeAccent}.500`} />
+    ) : (
+      <MarketInformation />
+    )}
+  </Fade>
+</TabPanel>
 
     {/* Funding Rates Panel */}
     <TabPanel px={0} pt={4}>
