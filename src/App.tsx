@@ -2,6 +2,7 @@ import {
   Box,
   Container,
   Flex,
+  Grid,
   Heading,
   Text,
   HStack,
@@ -52,12 +53,7 @@ import {
   ListItem,
   Circle,
   Link,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
+  
 } from '@chakra-ui/react';
 import {
   SunIcon,
@@ -168,7 +164,7 @@ function App() {
       try {
         setFundingLoading(true);
         setFundingError(null);
-        const rates = await fetchFundingRates(['BTC', 'ETH', 'SOL']);
+        const rates = await fetchFundingRates(['BTC', 'ETH', 'SOL', 'LTC', 'XRP', 'BNB', 'DOGE', 'ADA', 'SUI']);
         setFundingRates(rates);
       } catch (error) {
         console.error('Error loading funding rates:', error);
@@ -270,7 +266,7 @@ function App() {
     const interval = setInterval(() => {
       // Simulate new liquidation events coming in
       const randomAmount = Math.floor(Math.random() * 1000000) + 10000;
-      const randomSymbol = ['BTC', 'ETH', 'SOL', 'XRP'][Math.floor(Math.random() * 4)];
+      const randomSymbol = ['BTC', 'ETH', 'SOL', 'LTC', 'XRP', 'BNB', 'DOGE', 'ADA', 'SUI'][Math.floor(Math.random() * 9)];
 
       if (Math.random() > 0.5) {
         handleNewLiquidation({
@@ -1007,136 +1003,249 @@ const requestSort = (key: 'coin' | 'exchange' | 'adjustedFundingRate' | 'arbitra
   </Fade>
 </TabPanel>
 
-    {/* Funding Rates Panel */}
-    <TabPanel px={0} pt={4}>
-      <Flex align="center" mb={4}>
-        <Text fontSize="lg" fontWeight="bold" color={accentColor}>Funding Rates</Text>
-        <Spacer />
-        <HStack spacing={2} wrap="wrap">
-          <Tooltip label="Funding rates from major exchanges">
-            <Badge colorScheme="purple" fontSize="xs" p={1} borderRadius="md">Multi-Exchange</Badge>
-          </Tooltip>
-          <Tooltip label="Data refreshes every 5 minutes">
-            <Badge colorScheme="teal" fontSize="xs" p={1} borderRadius="md">Auto-Refresh</Badge>
-          </Tooltip>
-          <Tooltip label="This feature is under active development">
-            <Badge colorScheme="orange" fontSize="xs" p={1} borderRadius="md">In Development</Badge>
-          </Tooltip>
-        </HStack>
-      </Flex>
-      <Flex mb={4} flexDirection={{ base: 'column', sm: 'row' }} gap={2} alignItems={{ base: 'stretch', sm: 'center' }}>
-        <ButtonGroup size="sm" isAttached variant="outline" colorScheme={themeAccent}>
-          {['8h', '1d', '7d', '30d', '180d', '1y'].map(period => (
-            <Button
-              key={period}
-              onClick={() => setFundingPeriod(period as FundingPeriod)}
-              isActive={fundingPeriod === period}
-              _active={{ bg: `${themeAccent}.500`, color: 'white' }}
-              flex={1}
-            >
-              {period}
-            </Button>
-          ))}
-        </ButtonGroup>
-        <Spacer />
-      </Flex>
-      <Fade in={!fundingLoading} transition={{ enter: { duration: 0.5 } }}>
-        {fundingError ? (
-          <Alert status="error" borderRadius="md">
-            <AlertIcon />
-            <Box flex="1">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{fundingError}</AlertDescription>
-            </Box>
-          </Alert>
-        ) : fundingLoading ? (
-          <Skeleton
-            height="300px"
-            borderRadius="md"
-            startColor={`${themeAccent}.100`}
-            endColor={`${themeAccent}.500`}
-          />
-        ) : adjustedFundingRates.length > 0 ? (
-          <Box overflowX="auto">
-          <Table variant="simple" colorScheme={themeAccent}>
-            <Thead>
-              <Tr>
-                <Th 
-                  color={accentColor} 
-                  cursor="pointer" 
-                  onClick={() => requestSort('coin')}
-                  _hover={{ bg: 'gray.100' }}
-                >
-                  Coin
-                  {sortConfig.key === 'coin' && (
-                    <span>{sortConfig.direction === 'asc' ? ' ↑' : ' ↓'}</span>
-                  )}
-                </Th>
-                {['Binance', 'Bybit', 'OKX', 'Hyperliquid'].map(exchange => (
-                  <Th 
-                    key={exchange}
-                    color={accentColor}
-                    textAlign="center"
-                  >
-                    {exchange}
-                  </Th>
-                ))}
-                <Th 
-                  color={accentColor}
-                  textAlign="center"
-                >
-                  Arbitrage
-                </Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-  {Array.from(new Set(sortedFundingRates.map(rate => rate.coin))).map(coin => {
-    const coinRates = sortedFundingRates.filter(rate => rate.coin === coin);
-    const exchangeRates: Record<string, AdjustedFundingRate> = {};
-    
-    coinRates.forEach(rate => {
-      exchangeRates[rate.exchange] = rate;
-    });
-    
-    return (
-      <Tr key={coin}>
-        <Td fontWeight="medium">{coin}</Td>
-        {['Binance', 'Bybit', 'OKX', 'Hyperliquid'].map(exchange => {
-          const rate = exchangeRates[exchange];
-          return (
-            <Td 
-              key={`${coin}-${exchange}`} 
+<TabPanel px={0} pt={6}>
+  {/* Header Section */}
+  <Box 
+    bg={useColorModeValue(`${themeAccent}.50`, 'gray.800')}
+    borderRadius="lg"
+    p={6}
+    mb={6}
+    border="1px solid"
+    borderColor={useColorModeValue(`${themeAccent}.100`, 'gray.700')}
+  >
+    <Flex align="center" justify="space-between">
+      <VStack align="start" spacing={1}>
+        <Text 
+          fontSize="xl" 
+          fontWeight="700" 
+          color={useColorModeValue(accentColor, 'white')}
+        >
+          Funding Rates
+        </Text>
+        <Text 
+          fontSize="sm" 
+          color={useColorModeValue(mutedText, 'gray.300')}
+        >
+          Real-time funding rates across exchanges
+        </Text>
+      </VStack>
+
+      <HStack spacing={2}>
+        <Badge 
+          colorScheme={themeAccent}
+          fontSize="xs" 
+          px={3} 
+          py={1}
+          borderRadius="full"
+          fontWeight="600"
+        >
+          Multi-Exchange
+        </Badge>
+        <Badge 
+          colorScheme="teal"
+          fontSize="xs" 
+          px={3} 
+          py={1}
+          borderRadius="full"
+          fontWeight="600"
+        >
+          Auto-Refresh
+        </Badge>
+      </HStack>
+    </Flex>
+  </Box>
+
+  {/* Time Period Selector */}
+  <Box mb={6}>
+    <Text 
+      fontSize="sm" 
+      fontWeight="600" 
+      color={useColorModeValue(accentColor, 'gray.200')} 
+      mb={2}
+    >
+      Time Period
+    </Text>
+    <ButtonGroup size="sm" variant="outline">
+      {['8h', '1d', '7d', '30d', '180d', '1y'].map((period) => (
+        <Button
+          key={period}
+          onClick={() => setFundingPeriod(period as FundingPeriod)}
+          variant={fundingPeriod === period ? 'solid' : 'outline'}
+          colorScheme={themeAccent}
+        >
+          {period}
+        </Button>
+      ))}
+    </ButtonGroup>
+  </Box>
+
+  {/* Content Area */}
+  {fundingError ? (
+    <Alert status="error" borderRadius="lg" mb={6}>
+      <AlertIcon />
+      <Box>
+        <AlertTitle>Data Loading Error</AlertTitle>
+        <AlertDescription fontSize="sm">
+          {fundingError}
+        </AlertDescription>
+      </Box>
+    </Alert>
+  ) : fundingLoading ? (
+    <VStack spacing={4} align="stretch">
+      <Skeleton height="40px" borderRadius="md" />
+      {Array(5).fill(0).map((_, i) => (
+        <Skeleton key={i} height="35px" borderRadius="md" />
+      ))}
+    </VStack>
+  ) : adjustedFundingRates.length > 0 ? (
+    <Box
+      bg={useColorModeValue('white', 'gray.800')}
+      borderRadius="lg"
+      overflow="hidden"
+      border="1px solid"
+      borderColor={useColorModeValue('gray.200', 'gray.700')}
+    >
+      {/* Table Header */}
+      <Box
+        bg={useColorModeValue('gray.50', 'gray.700')}
+        px={4}
+        py={3}
+      >
+        <Grid
+          templateColumns="2fr repeat(4, 1fr) 1fr"
+          gap={4}
+          alignItems="center"
+        >
+          <Text
+            fontSize="xs"
+            fontWeight="600"
+            color={useColorModeValue('gray.600', 'gray.300')}
+            textTransform="uppercase"
+            letterSpacing="0.5px"
+            onClick={() => requestSort('coin')}
+            cursor="pointer"
+          >
+            Coin {sortConfig.key === 'coin' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+          </Text>
+          {['Binance', 'Bybit', 'OKX', 'Hyperliquid'].map(exchange => (
+            <Text
+              key={exchange}
+              fontSize="xs"
+              fontWeight="600"
+              color={useColorModeValue('gray.600', 'gray.300')}
+              textTransform="uppercase"
+              letterSpacing="0.5px"
               textAlign="center"
-              color={
-                rate ? 
-                  (rate.adjustedFundingRate >= 0 ? 'green.400' : 'red.400') : 
-                  mutedText
-              }
             >
-              {rate ? 
-                `${rate.adjustedFundingRate >= 0 ? '+' : ''}${rate.adjustedFundingRate.toFixed(4)}%` : 
-                '-'}
-            </Td>
+              {exchange}
+            </Text>
+          ))}
+          <Text
+            fontSize="xs"
+            fontWeight="600"
+            color={useColorModeValue('gray.600', 'gray.300')}
+            textTransform="uppercase"
+            letterSpacing="0.5px"
+            textAlign="center"
+          >
+            Arbitrage
+          </Text>
+        </Grid>
+      </Box>
+
+      {/* Table Body */}
+      <Box maxH="500px" overflowY="auto">
+        {Array.from(new Set(sortedFundingRates.map(rate => rate.coin))).map((coin, index) => {
+          const coinRates = sortedFundingRates.filter(rate => rate.coin === coin);
+          const exchangeRates: Record<string, AdjustedFundingRate> = {};
+          
+          coinRates.forEach(rate => {
+            exchangeRates[rate.exchange] = rate;
+          });
+          
+          return (
+            <Box
+              key={coin}
+              borderBottom="1px solid"
+              borderColor={useColorModeValue('gray.100', 'gray.700')}
+              bg={index % 2 === 0 ? useColorModeValue('gray.50', 'gray.800') : 'transparent'}
+              px={4}
+              py={3}
+            >
+              <Grid
+                templateColumns="2fr repeat(4, 1fr) 1fr"
+                gap={4}
+                alignItems="center"
+              >
+                {/* Coin */}
+                <Flex align="center" gap={2}>
+                  <Text 
+                    fontWeight="600" 
+                    fontSize="sm" 
+                    color={useColorModeValue('gray.800', 'white')}
+                  >
+                    {coin}
+                  </Text>
+                </Flex>
+
+                {/* Exchange Rates */}
+                {['Binance', 'Bybit', 'OKX', 'Hyperliquid'].map(exchange => {
+                  const rate = exchangeRates[exchange];
+                  return (
+                    <Box key={`${coin}-${exchange}`} textAlign="center">
+                      {rate ? (
+                        <Text
+                          fontSize="sm"
+                          fontWeight="500"
+                          color={useColorModeValue(
+                            rate.adjustedFundingRate >= 0 ? 'green.600' : 'red.600',
+                            rate.adjustedFundingRate >= 0 ? 'green.300' : 'red.300'
+                          )}
+                        >
+                          {rate.adjustedFundingRate >= 0 ? '+' : ''}
+                          {rate.adjustedFundingRate.toFixed(4)}%
+                        </Text>
+                      ) : (
+                        <Text color={useColorModeValue('gray.400', 'gray.500')} fontSize="sm">
+                          -
+                        </Text>
+                      )}
+                    </Box>
+                  );
+                })}
+
+                {/* Arbitrage */}
+                <Box textAlign="center">
+                  {calculateArbitrage(adjustedFundingRates, coin) || (
+                    <Text color={useColorModeValue('gray.400', 'gray.500')} fontSize="sm">
+                      -
+                    </Text>
+                  )}
+                </Box>
+              </Grid>
+            </Box>
           );
         })}
-        <Td textAlign="center">
-          {calculateArbitrage(adjustedFundingRates, coin) || (
-            <Text color={mutedText}>-</Text>
-          )}
-        </Td>
-      </Tr>
-    );
-  })}
-</Tbody>
-          </Table>
-        </Box>
-        ) : (
-          <Text color={mutedText} textAlign="center" py={8}>
-            No funding rate data available
-          </Text>
-        )}
-      </Fade>
-    </TabPanel>
+      </Box>
+    </Box>
+  ) : (
+    <Box
+      bg={useColorModeValue('white', 'gray.800')}
+      borderRadius="lg"
+      p={8}
+      textAlign="center"
+      border="1px dashed"
+      borderColor={useColorModeValue('gray.200', 'gray.600')}
+    >
+      <Text 
+        color={useColorModeValue('gray.500', 'gray.400')} 
+        fontSize="sm"
+      >
+        No funding rate data available
+      </Text>
+    </Box>
+  )}
+</TabPanel>
   </TabPanels>
 </Tabs>
                 </Box>

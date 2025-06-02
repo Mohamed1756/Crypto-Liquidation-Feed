@@ -16,33 +16,81 @@ interface MarketData {
   lastUpdated: Date;
 }
 
+// API endpoints configuration
+const API_ENDPOINTS = {
+  OPEN_INTEREST: 'https://api.coingecko.com/api/v3/derivatives/exchanges',
+  VOLUME: 'https://api.coingecko.com/api/v3/global',
+  DOMINANCE: 'https://api.coingecko.com/api/v3/global',
+  FUNDING_RATES: 'https://fapi.binance.com/fapi/v1/premiumIndex'
+};
+
 export const MarketInformation: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [marketData, setMarketData] = useState<MarketData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulated API call to fetch market data
     const fetchMarketData = async () => {
       setIsLoading(true);
+      setError(null);
       
-      // In a real implementation, this would be an API call
-      // For now, using dummy data
-      setTimeout(() => {
+      try {
+        // Fetch data from multiple APIs in parallel
+        const [volumeData, dominanceData, fundingData] = await Promise.all([
+          fetch(API_ENDPOINTS.VOLUME).then(res => res.json()),
+          fetch(API_ENDPOINTS.DOMINANCE).then(res => res.json()),
+          fetch(API_ENDPOINTS.FUNDING_RATES).then(res => res.json())
+        ]);
+
+        // Calculate market trend based on 24h price changes
+        const btcChange = dominanceData.data.market_cap_percentage.btc_24h_change;
+        const ethChange = dominanceData.data.market_cap_percentage.eth_24h_change;
+        const marketTrend = (btcChange > 2 && ethChange > 2) ? 'bullish' : 
+                          (btcChange < -2 || ethChange < -2) ? 'bearish' : 'neutral';
+
+        // Calculate funding health (simplified)
+        const averageFunding = fundingData.reduce((acc: number, curr: any) => 
+          acc + parseFloat(curr.lastFundingRate), 0) / fundingData.length;
+        const fundingHealth = averageFunding > 0 ? 'positive' : averageFunding < 0 ? 'negative' : 'neutral';
+
         setMarketData({
-          totalOI: 12.7, // In billions
-          dailyVolume: 45.3, // In billions
+          totalOI: volumeData.data.total_derivatives_volume_24h / 1000000000, // Convert to billions
+          dailyVolume: volumeData.data.total_volume / 1000000000, // Convert to billions
+          dominanceData: [
+            { symbol: 'BTC', percentage: Math.round(dominanceData.data.market_cap_percentage.btc * 10) / 10 },
+            { symbol: 'ETH', percentage: Math.round(dominanceData.data.market_cap_percentage.eth * 10) / 10 },
+            { symbol: 'SOL', percentage: Math.round(dominanceData.data.market_cap_percentage.sol * 10) / 10 || 0 },
+            { symbol: 'Others', percentage: Math.round(
+              (100 - 
+               dominanceData.data.market_cap_percentage.btc - 
+               dominanceData.data.market_cap_percentage.eth - 
+               (dominanceData.data.market_cap_percentage.sol || 0)) * 10
+            ) / 10 }
+          ],
+          marketTrend,
+          fundingHealth,
+          lastUpdated: new Date()
+        });
+      } catch (err) {
+        console.error('Failed to fetch market data:', err);
+        setError('Failed to load market data. Please try again later.');
+        // Fallback to dummy data if API fails
+        setMarketData({
+          totalOI: 12.7,
+          dailyVolume: 45.3,
           dominanceData: [
             { symbol: 'BTC', percentage: 42.3 },
             { symbol: 'ETH', percentage: 28.7 },
             { symbol: 'SOL', percentage: 8.2 },
             { symbol: 'Others', percentage: 20.8 }
           ],
-          marketTrend: 'bullish',
-          fundingHealth: 'positive',
+          marketTrend: 'neutral',
+          fundingHealth: 'neutral',
           lastUpdated: new Date()
         });
+      } finally {
         setIsLoading(false);
-      }, 1500);
+      }
     };
 
     fetchMarketData();
@@ -51,10 +99,14 @@ export const MarketInformation: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
- 
-
   return (
     <Box>
+      {error && (
+        <Text color="red.500" mb={4}>
+          {error} Using cached data.
+        </Text>
+      )}
+      
       {isLoading ? (
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           {[...Array(4)].map((_, i) => (
@@ -73,8 +125,12 @@ export const MarketInformation: React.FC = () => {
                 </Tooltip>
               </HStack>
               <StatHelpText>
-                <StatArrow type="increase" />
-                5.2% since yesterday
+                {marketData.marketTrend === 'bullish' ? (
+                  <StatArrow type="increase" />
+                ) : marketData.marketTrend === 'bearish' ? (
+                  <StatArrow type="decrease" />
+                ) : null}
+                {marketData.marketTrend !== 'neutral' ? 'Market is ' + marketData.marketTrend : 'Market is neutral'}
               </StatHelpText>
             </Stat>
             
@@ -87,8 +143,12 @@ export const MarketInformation: React.FC = () => {
                 </Tooltip>
               </HStack>
               <StatHelpText>
-                <StatArrow type="decrease" />
-                2.3% since yesterday
+                {marketData.fundingHealth === 'positive' ? (
+                  <StatArrow type="increase" />
+                ) : marketData.fundingHealth === 'negative' ? (
+                  <StatArrow type="decrease" />
+                ) : null}
+                {marketData.fundingHealth !== 'neutral' ? 'Funding rates are ' + marketData.fundingHealth : 'Funding rates are neutral'}
               </StatHelpText>
             </Stat>
           </SimpleGrid>

@@ -19,7 +19,7 @@ const extractCoin = (symbol: string): string => {
   return symbol.replace(/USDT$/, '');
 };
 
-export async function fetchFundingRates(targetCoins: string[] = ['BTC', 'ETH', 'SOL']): Promise<FundingRate[]> {
+export async function fetchFundingRates(targetCoins: string[] = ['BTC', 'ETH', 'SOL', 'LTC', 'XRP', 'BNB', 'DOGE', 'ADA', 'SUI']): Promise<FundingRate[]> {
   const allRates: FundingRate[] = [];
   const okxSymbols = targetCoins.map(coin => `${coin}-USDT-SWAP`);
 
@@ -123,7 +123,13 @@ export async function fetchFundingRates(targetCoins: string[] = ['BTC', 'ETH', '
       const coinIndices: Record<string, number> = {
         'BTC': 0,
         'ETH': 1,
-        'SOL': 2
+        'SOL': 2,
+        'LTC': 8,
+        'XRP': 9,
+        'BNB': 10,
+        'DOGE': 7,
+        'ADA': 12,
+        'SUI': 5,
       };
       
       for (const coin of targetCoins) {
