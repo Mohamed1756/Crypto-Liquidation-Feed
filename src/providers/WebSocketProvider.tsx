@@ -138,7 +138,7 @@ export const WebSocketProvider: React.FC<{
                 quantity: parseFloat(msg.q),
                 price: parseFloat(msg.ap),
                 orderStatus: msg.X,
-                timestamp: DateTime.fromMillis(parseInt(msg.T)),
+                timestamp: DateTime.now(), // Fixed: Use server receive time to prevent 2m drift bug
                 value: parseFloat(msg.q) * parseFloat(msg.ap),
               };
             }
@@ -159,7 +159,7 @@ export const WebSocketProvider: React.FC<{
                 quantity: parseFloat(msg.v),
                 price: parseFloat(msg.p),
                 orderStatus: 'FILLED',
-                timestamp: DateTime.fromMillis(msg.T),
+                timestamp: DateTime.now(), // Fixed: Use server receive time to prevent 2m drift bug
                 value: parseFloat(msg.v) * parseFloat(msg.p),
               };
             }
@@ -191,7 +191,7 @@ export const WebSocketProvider: React.FC<{
                 quantity: parseFloat(detail.sz),
                 price: parseFloat(detail.bkPx),
                 orderStatus: 'FILLED',
-                timestamp: DateTime.fromMillis(parseInt(detail.ts)),
+                timestamp: DateTime.now(), // Fixed: Use server receive time to prevent 2m drift bug
                 value: parseFloat(detail.sz) * parseFloat(detail.bkPx),
               };
               console.log('OKX parsed liquidation:', liquidation);
