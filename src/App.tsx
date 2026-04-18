@@ -26,15 +26,57 @@ import { WebSocketProvider } from './providers/WebSocketProvider';
 import { useLiquidationStore } from './store/liquidationStore';
 import { useState } from 'react';
 import { FundingRatesTab } from './components/FundingRatesTab';
-import { WhaleAlertTable } from './components/WhaleAlert';
+import { LiquidationClusters } from './components/LiquidationClusters';
 
 
+
+import React from 'react';
 
 type Exchange = 'BINANCE' | 'BYBIT' | 'OKX';
 
-function App() {
+// Isolate high-frequency re-renders into a dedicated component.
+// This prevents the entire App.tsx (and its heavy children) from re-rendering 50 times a second.
+const HeaderMetrics = React.memo(() => {
   const { totalValue, stats } = useLiquidationStore();
   const { buyCount, sellCount, largestLiquidation } = stats;
+
+  return (
+    <HStack spacing={10} fontSize="11px" color="brand.mutedInk" fontWeight="700" fontFamily="mono">
+      <VStack align="start" spacing={0}>
+        <Text opacity={0.6} fontSize="8px" letterSpacing="0.05em">BATTLE (SHORTS : LONGS)</Text>
+        <HStack spacing={1}>
+          <Text color="brand.mutedGreen" fontSize="16px" fontWeight="900" title="Shorts Liquidated">{buyCount}</Text>
+          <Text color="brand.border" fontSize="14px">:</Text>
+          <Text color="brand.mutedRed" fontSize="16px" fontWeight="900" title="Longs Liquidated">{sellCount}</Text>
+        </HStack>
+      </VStack>
+      <VStack align="start" spacing={0}>
+        <Text opacity={0.6} fontSize="8px" letterSpacing="0.05em">TOP LIQ</Text>
+        <Text color="brand.ink" fontSize="16px">
+          {largestLiquidation
+            ? largestLiquidation.value >= 1000000
+              ? `$${(largestLiquidation.value / 1000000).toFixed(2)}M`
+              : largestLiquidation.value >= 1000
+                ? `$${(largestLiquidation.value / 1000).toFixed(1)}K`
+                : `$${Math.round(largestLiquidation.value)}`
+            : '-'}
+        </Text>
+      </VStack>
+      <VStack align="start" spacing={0}>
+        <Text opacity={0.6} fontSize="8px" letterSpacing="0.05em">CUMULATIVE</Text>
+        <Text color="brand.ink" fontSize="16px">
+          {totalValue >= 1000000
+            ? `$${(totalValue / 1000000).toFixed(3)}M`
+            : totalValue >= 1000
+              ? `$${(totalValue / 1000).toFixed(1)}K`
+              : `$${Math.round(totalValue)}`}
+        </Text>
+      </VStack>
+    </HStack>
+  );
+});
+
+function App() {
   // Exchanges
   const availableExchanges: Exchange[] = ['BINANCE', 'BYBIT', 'OKX'];
   const [selectedExchanges, setSelectedExchanges] = useState<Exchange[]>(['BINANCE', 'BYBIT', 'OKX']);
@@ -63,38 +105,7 @@ function App() {
         {/* Technical Minimal Header */}
         <Flex justify="space-between" align="center" py={4} mb={6} borderBottom="2px solid" borderColor="brand.ink">
           <Flex align="center" gap={12}>
-            <HStack spacing={10} fontSize="11px" color="brand.mutedInk" fontWeight="700" fontFamily="mono">
-              <VStack align="start" spacing={0}>
-                <Text opacity={0.6} fontSize="8px" letterSpacing="0.05em">BATTLE (SHORTS : LONGS)</Text>
-                <HStack spacing={1}>
-                  <Text color="brand.mutedGreen" fontSize="16px" fontWeight="900" title="Shorts Liquidated">{buyCount}</Text>
-                  <Text color="brand.border" fontSize="14px">:</Text>
-                  <Text color="brand.mutedRed" fontSize="16px" fontWeight="900" title="Longs Liquidated">{sellCount}</Text>
-                </HStack>
-              </VStack>
-              <VStack align="start" spacing={0}>
-                <Text opacity={0.6} fontSize="8px" letterSpacing="0.05em">TOP LIQ</Text>
-                <Text color="brand.ink" fontSize="16px">
-                  {largestLiquidation
-                    ? largestLiquidation.value >= 1000000
-                      ? `$${(largestLiquidation.value / 1000000).toFixed(2)}M`
-                      : largestLiquidation.value >= 1000
-                        ? `$${(largestLiquidation.value / 1000).toFixed(1)}K`
-                        : `$${Math.round(largestLiquidation.value)}`
-                    : '-'}
-                </Text>
-              </VStack>
-              <VStack align="start" spacing={0}>
-                <Text opacity={0.6} fontSize="8px" letterSpacing="0.05em">CUMULATIVE</Text>
-                <Text color="brand.ink" fontSize="16px">
-                  {totalValue >= 1000000
-                    ? `$${(totalValue / 1000000).toFixed(3)}M`
-                    : totalValue >= 1000
-                      ? `$${(totalValue / 1000).toFixed(1)}K`
-                      : `$${Math.round(totalValue)}`}
-                </Text>
-              </VStack>
-            </HStack>
+            <HeaderMetrics />
           </Flex>
 
           <Flex align="center" gap={3}>
@@ -241,20 +252,32 @@ function App() {
             <FundingRatesTab />
           </Box>
 
-          {/* Rolling Tape & Whale Signals */}
+          {/* Analytics & Rolling Tape */}
           <Flex flex="1" direction="column" gap={0} minW={{ base: '100%', lg: '420px' }} maxW="480px">
-            <Box flex="1.5" borderBottom="1px solid" borderColor="brand.border" pb={4} overflow="hidden">
-              <Text fontSize="10px" fontWeight="900" color="brand.ink" mb={2} letterSpacing="wider">LIQUIDATION STREAM</Text>
+            <Box flex="1" borderBottom="1px solid" borderColor="brand.border" pb={4} overflow="hidden">
+              <HStack justify="space-between" mb={2}>
+                <Text fontSize="10px" fontWeight="900" color="brand.ink" letterSpacing="wider">LIQUIDATION CLUSTERS</Text>
+                <Popover placement="left" trigger="hover">
+                  <PopoverTrigger>
+                    <Box cursor="help"><QuestionIcon boxSize="10px" color="brand.mutedInk" /></Box>
+                  </PopoverTrigger>
+                  <PopoverContent bg="brand.paper" borderColor="brand.ink" borderRadius="0" fontSize="10px" fontFamily="mono" boxShadow="none">
+                    <PopoverBody>
+                      Clusters represent high-density liquidation pools. When price enters these zones, it often triggers a "chain reaction" leading to sharp reversals or explosive volatility.
+                    </PopoverBody>
+                  </PopoverContent>
+                </Popover>
+              </HStack>
+              <LiquidationClusters minAmount={minLiquidationValue} />
+            </Box>
+            
+            <Box flex="1.5" pt={4} overflow="hidden">
+              <Text fontSize="10px" fontWeight="900" color="brand.ink" mb={2} letterSpacing="wider">LIVE LIQUIDATION STREAM</Text>
               <LiquidationTable
                 soundEnabled={soundEnabled}
-                onNewLiquidation={() => { }}
                 compact={true}
                 minAmount={minLiquidationValue}
               />
-            </Box>
-            <Box flex="1" pt={4} overflow="hidden">
-              <Text fontSize="10px" fontWeight="900" color="brand.ink" mb={2} letterSpacing="wider">LARGE LIQUIDATIONS</Text>
-              <WhaleAlertTable compact={true} soundEnabled={soundEnabled} />
             </Box>
           </Flex>
         </Flex>
@@ -262,5 +285,7 @@ function App() {
     </WebSocketProvider>
   );
 }
+
+
 
 export default App;

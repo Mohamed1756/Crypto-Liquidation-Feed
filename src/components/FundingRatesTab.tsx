@@ -34,7 +34,9 @@ const PERIOD_FACTORS: Record<FundingPeriod, number> = {
 
 const EXCHANGES = ['binance', 'bybit', 'hyperliquid', 'lighter'];
 
-export function FundingRatesTab() {
+import { memo } from 'react';
+
+export const FundingRatesTab = memo(function FundingRatesTab() {
   const [rates, setRates] = useState<FundingRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<FundingPeriod>('8h');
@@ -86,26 +88,7 @@ export function FundingRatesTab() {
       .slice(0, 5);
   }, [marketData]);
 
-  const carryOpportunities = useMemo(() => {
-    return marketData
-      .map(({ symbol, cells }) => {
-        // Find best exchange to short perp (highest positive funding)
-        const best = Object.entries(cells)
-          .filter(([ex]) => EXCHANGES.includes(ex))
-          .sort(([, a], [, b]) => b - a)[0];
-        
-        if (!best || best[1] <= 0) return null;
-        
-        return {
-          symbol,
-          exchange: best[0],
-          rate: best[1],
-        };
-      })
-      .filter((o): o is NonNullable<typeof o> => o !== null)
-      .sort((a, b) => b.rate - a.rate)
-      .slice(0, 5);
-  }, [marketData]);
+
 
   const fetchData = async () => {
     setLoading(true);
@@ -171,83 +154,44 @@ export function FundingRatesTab() {
 
       {/* Arbitrage Opportunities Section */}
       <Box mb={8}>
-        <Grid templateColumns={{ base: "1fr", xl: "1fr 1fr" }} gap={8}>
-          {/* Delta Arb (Cash & Carry) */}
-          <Box>
-            <Text 
-              fontSize="10px" 
-              fontWeight="900" 
-              color="brand.paper" 
-              bg="brand.ink" 
-              px={2} 
-              py={0.5} 
-              display="inline-block" 
-              mb={3} 
-              letterSpacing="0.1em"
-            >
-              01 // DELTA ARB (SPOT/PERP)
-            </Text>
-            <Grid templateColumns="repeat(auto-fill, minmax(140px, 1fr))" gap={3}>
-              {carryOpportunities.map(opp => (
-                <Box key={opp.symbol} p={3} border="1px solid" borderColor="brand.border" _hover={{ bg: 'rgba(0,0,0,0.01)' }}>
-                  <Flex justify="space-between" mb={2} align="baseline">
-                    <Text fontSize="12px" fontWeight="700" color="brand.ink">{opp.symbol}</Text>
-                    <Text fontSize="11px" fontWeight="700" color="brand.mutedRed">+{(opp.rate * 100).toFixed(3)}%</Text>
-                  </Flex>
-                  <HStack spacing={2} fontSize="8px" fontWeight="600" color="brand.mutedInk" fontFamily="mono">
-                    <VStack align="start" spacing={0} flex={1}>
-                      <Text opacity={0.5} fontSize="7px">LONG</Text>
-                      <Text color="brand.ink">SPOT</Text>
-                    </VStack>
-                    <Box w="1px" h="12px" bg="brand.border" />
-                    <VStack align="start" spacing={0} flex={1}>
-                      <Text opacity={0.5} fontSize="7px">SHORT</Text>
-                      <Text color="brand.ink">{opp.exchange.toUpperCase()}</Text>
-                    </VStack>
-                  </HStack>
-                </Box>
-              ))}
-            </Grid>
-          </Box>
+        {/* Funding Arb (X-Exchange) */}
+        <Box>
+          <Text 
+            fontSize="10px" 
+            fontWeight="900" 
+            color="brand.paper" 
+            bg="brand.ink" 
+            px={2} 
+            py={0.5} 
+            display="inline-block" 
+            mb={3} 
+            letterSpacing="0.1em"
+          >
+            FUNDING ARB (X-EXCHANGE)
+          </Text>
+          <Grid templateColumns="repeat(auto-fill, minmax(140px, 1fr))" gap={3}>
+            {fundingArbOpportunities.map(opp => (
+              <Box key={opp.symbol} p={3} border="1px solid" borderColor="brand.border" _hover={{ bg: 'rgba(0,0,0,0.01)' }}>
+                <Flex justify="space-between" mb={2} align="baseline">
+                  <Text fontSize="12px" fontWeight="700" color="brand.ink">{opp.symbol}</Text>
+                  <Text fontSize="11px" fontWeight="700" color="brand.turquoise">+{(opp.spread * 100).toFixed(3)}%</Text>
+                </Flex>
+                <HStack spacing={2} fontSize="8px" fontWeight="600" color="brand.mutedInk" fontFamily="mono">
+                  <VStack align="start" spacing={0} flex={1}>
+                    <Text opacity={0.5} fontSize="7px">LONG</Text>
+                    <Text color="brand.ink">{opp.longEx.toUpperCase()}</Text>
+                  </VStack>
+                  <Box w="1px" h="12px" bg="brand.border" />
+                  <VStack align="start" spacing={0} flex={1}>
+                    <Text opacity={0.5} fontSize="7px">SHORT</Text>
+                    <Text color="brand.ink">{opp.shortEx.toUpperCase()}</Text>
+                  </VStack>
+                </HStack>
+              </Box>
+            ))}
+          </Grid>
+        </Box>
 
-          {/* Funding Arb (X-Exchange) */}
-          <Box>
-            <Text 
-              fontSize="10px" 
-              fontWeight="900" 
-              color="brand.paper" 
-              bg="brand.ink" 
-              px={2} 
-              py={0.5} 
-              display="inline-block" 
-              mb={3} 
-              letterSpacing="0.1em"
-            >
-              02 // FUNDING ARB (X-EXCHANGE)
-            </Text>
-            <Grid templateColumns="repeat(auto-fill, minmax(140px, 1fr))" gap={3}>
-              {fundingArbOpportunities.map(opp => (
-                <Box key={opp.symbol} p={3} border="1px solid" borderColor="brand.border" _hover={{ bg: 'rgba(0,0,0,0.01)' }}>
-                  <Flex justify="space-between" mb={2} align="baseline">
-                    <Text fontSize="12px" fontWeight="700" color="brand.ink">{opp.symbol}</Text>
-                    <Text fontSize="11px" fontWeight="700" color="brand.turquoise">+{(opp.spread * 100).toFixed(3)}%</Text>
-                  </Flex>
-                  <HStack spacing={2} fontSize="8px" fontWeight="600" color="brand.mutedInk" fontFamily="mono">
-                    <VStack align="start" spacing={0} flex={1}>
-                      <Text opacity={0.5} fontSize="7px">LONG</Text>
-                      <Text color="brand.ink">{opp.longEx.toUpperCase()}</Text>
-                    </VStack>
-                    <Box w="1px" h="12px" bg="brand.border" />
-                    <VStack align="start" spacing={0} flex={1}>
-                      <Text opacity={0.5} fontSize="7px">SHORT</Text>
-                      <Text color="brand.ink">{opp.shortEx.toUpperCase()}</Text>
-                    </VStack>
-                  </HStack>
-                </Box>
-              ))}
-            </Grid>
-          </Box>
-        </Grid>
         <Box borderBottom="2px solid" borderColor="brand.border" mt={6} />
       </Box>
 
@@ -318,4 +262,4 @@ export function FundingRatesTab() {
       </HStack>
     </Box>
   );
-}
+});
