@@ -12,6 +12,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { 
   RefreshCw,
 } from 'lucide-react';
+import { InlineHelp } from './InlineHelp';
+import { useFundingStore } from '../store/fundingStore';
 
 interface FundingRate {
   market_id: number;
@@ -85,7 +87,7 @@ export const FundingRatesTab = memo(function FundingRatesTab() {
       })
       .filter((o): o is NonNullable<typeof o> => o !== null)
       .sort((a, b) => b.spread - a.spread)
-      .slice(0, 5);
+      .slice(0, 10);
   }, [marketData]);
 
 
@@ -93,15 +95,43 @@ export const FundingRatesTab = memo(function FundingRatesTab() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      let finalRates: FundingRate[] = [];
       const resp = await fetch(`https://api.v2.lighter.xyz/funding_rates?period=8h`);
-      const data = await resp.json();
-      const finalRates = Array.isArray(data) ? data : (data.funding_rates || []);
+      if (resp.ok) {
+        const data = await resp.json();
+        finalRates = Array.isArray(data) ? data : (data.funding_rates || []);
+      } else {
+        throw new Error('Fallback trigger');
+      }
       setRates(finalRates);
+      
+      const symbolMap: Record<string, number[]> = {};
+      finalRates.forEach(r => {
+        if (!symbolMap[r.symbol]) symbolMap[r.symbol] = [];
+        symbolMap[r.symbol].push(r.rate);
+      });
+      const aggregated = Object.entries(symbolMap).map(([symbol, ratesArr]) => ({
+        symbol,
+        averageRate: ratesArr.reduce((a, b) => a + b, 0) / ratesArr.length
+      }));
+      useFundingStore.getState().setRawRates(aggregated);
     } catch (e) {
       console.error(e);
       const fallbackResp = await fetch(`https://mainnet.zklighter.elliot.ai/api/v1/funding-rates?period=8h`);
       const fallbackData = await fallbackResp.json();
-      setRates(fallbackData.funding_rates || []);
+      const finalRates: FundingRate[] = fallbackData.funding_rates || [];
+      setRates(finalRates);
+      
+      const symbolMap: Record<string, number[]> = {};
+      finalRates.forEach(r => {
+        if (!symbolMap[r.symbol]) symbolMap[r.symbol] = [];
+        symbolMap[r.symbol].push(r.rate);
+      });
+      const aggregated = Object.entries(symbolMap).map(([symbol, ratesArr]) => ({
+        symbol,
+        averageRate: ratesArr.reduce((a, b) => a + b, 0) / ratesArr.length
+      }));
+      useFundingStore.getState().setRawRates(aggregated);
     }
     setLoading(false);
   };
@@ -116,7 +146,10 @@ export const FundingRatesTab = memo(function FundingRatesTab() {
     <Box height="100%" display="flex" flexDirection="column" bg="brand.paper">
       <Flex justify="space-between" align="center" mb={6}>
         <HStack spacing={4}>
-          <Text fontSize="11px" fontWeight="800" color="brand.ink" letterSpacing="wider">FUNDING TAPE</Text>
+          <HStack spacing={1}>
+            <Text fontSize="11px" fontWeight="800" color="brand.ink" letterSpacing="wider">FUNDING RATES</Text>
+            <InlineHelp title="FUNDING RATES" body="Cross-exchange funding rates for perpetuals. Positive funding means longs pay shorts. Negative funding means shorts pay longs." />
+          </HStack>
           <ButtonGroup size="xs" variant="outline" isAttached>
             {(['8h', '1d', '7d', '30d', '90d', '180d', '365d'] as FundingPeriod[]).map((p) => (
               <Button
@@ -156,19 +189,21 @@ export const FundingRatesTab = memo(function FundingRatesTab() {
       <Box mb={8}>
         {/* Funding Arb (X-Exchange) */}
         <Box>
-          <Text 
-            fontSize="10px" 
-            fontWeight="900" 
-            color="brand.paper" 
-            bg="brand.ink" 
-            px={2} 
-            py={0.5} 
-            display="inline-block" 
-            mb={3} 
-            letterSpacing="0.1em"
-          >
-            FUNDING ARB (X-EXCHANGE)
-          </Text>
+          <HStack spacing={1} mb={3}>
+            <Text 
+              fontSize="10px" 
+              fontWeight="900" 
+              color="brand.paper" 
+              bg="brand.ink" 
+              px={2} 
+              py={0.5} 
+              display="inline-block" 
+              letterSpacing="0.1em"
+            >
+              FUNDING SPREADS
+            </Text>
+            <InlineHelp title="FUNDING SPREADS" body="Largest funding gaps between exchanges. The simple read is long the lowest-funding exchange and short the highest-funding exchange, ignoring carry and execution costs." placement="right" />
+          </HStack>
           <Grid templateColumns="repeat(auto-fill, minmax(140px, 1fr))" gap={3}>
             {fundingArbOpportunities.map(opp => (
               <Box key={opp.symbol} p={3} border="1px solid" borderColor="brand.border" _hover={{ bg: 'rgba(0,0,0,0.01)' }}>

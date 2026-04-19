@@ -5,7 +5,7 @@ import {
   VStack,
   HStack,
   Flex,
-  Tooltip,
+
   Modal,
   ModalOverlay,
   ModalContent,
@@ -21,29 +21,52 @@ import {
   Td,
   TableContainer,
 } from '@chakra-ui/react';
-import { useClusteringStore, LiqCluster } from '../store/clusteringStore';
+import { useClusteringStore, LiqCluster, buildClustersFromLiquidations, buildVolatilityZones } from '../store/clusteringStore';
+import { WarningIcon } from '@chakra-ui/icons';
+import { InlineHelp } from './InlineHelp';
+import type { Liquidation } from '../types/liquidation';
+
+const formatPrice = (price: number) => {
+  if (price >= 1000) return price.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  return price.toLocaleString(undefined, { maximumFractionDigits: 4 });
+};
 
 interface Props {
   minAmount: number;
+  liquidations?: Liquidation[];
 }
 
-export const LiquidationClusters: React.FC<Props> = React.memo(({ minAmount }) => {
+export const LiquidationClusters: React.FC<Props> = React.memo(({ minAmount, liquidations }) => {
   const { clusters, pruneClusters } = useClusteringStore();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedCluster, setSelectedCluster] = useState<LiqCluster | null>(null);
-  
+
   useEffect(() => {
+    if (liquidations) {
+      return;
+    }
+
     const interval = setInterval(pruneClusters, 60000);
     return () => clearInterval(interval);
-  }, [pruneClusters]);
-  
-  // Rank clusters by total value and filter by minAmount
-  const sortedClusters = useMemo(() => 
-    clusters
+  }, [liquidations, pruneClusters]);
+
+  const sourceClusters = useMemo(() => {
+    if (!liquidations) {
+      return clusters;
+    }
+
+    const referenceTime = liquidations[0]?.timestamp.toMillis() || Date.now();
+    return buildClustersFromLiquidations(liquidations, referenceTime);
+  }, [clusters, liquidations]);
+
+  const sortedClusters = useMemo(() =>
+    sourceClusters
       .filter(c => c.totalValue >= minAmount)
       .sort((a, b) => b.totalValue - a.totalValue),
-    [clusters, minAmount]
+    [sourceClusters, minAmount]
   );
+
+  const volatilityZones = useMemo(() => buildVolatilityZones(sourceClusters), [sourceClusters]);
 
   const handleClusterClick = (cluster: LiqCluster) => {
     setSelectedCluster(cluster);
@@ -61,9 +84,9 @@ export const LiquidationClusters: React.FC<Props> = React.memo(({ minAmount }) =
 
   return (
     <>
-      <Box 
-        overflowY="auto" 
-        h="100%" 
+      <Box
+        overflowY="auto"
+        h="100%"
         pr={2}
         css={{
           '&::-webkit-scrollbar': { width: '2px' },
@@ -71,14 +94,40 @@ export const LiquidationClusters: React.FC<Props> = React.memo(({ minAmount }) =
           '&::-webkit-scrollbar-thumb': { background: 'rgba(0,0,0,0.1)' },
         }}
       >
-        <VStack align="stretch" spacing={2}>
-          {sortedClusters.map((cluster) => (
-            <ClusterRow 
-              key={cluster.id} 
-              cluster={cluster} 
-              onClick={() => handleClusterClick(cluster)}
-            />
-          ))}
+        <VStack align="stretch" spacing={4}>
+          {volatilityZones.length > 0 && (
+            <VStack align="stretch" spacing={2}>
+              <HStack spacing={1}>
+                <Text fontSize="9px" fontWeight="900" color="brand.mutedRed" letterSpacing="0.05em" display="flex" alignItems="center" gap={1}>
+                  <WarningIcon boxSize="10px" /> LIQUIDITY VOIDS [FAST MOVES LIKELY]
+                </Text>
+                <InlineHelp title="LIQUIDITY VOIDS" body="Open price gaps between large liquidation clusters. If price enters a void, there is less nearby liquidation activity to slow the move down." placement="right" />
+              </HStack>
+              {volatilityZones.map((zone, idx) => (
+                <Box key={`void-${idx}`} border="1px dashed" borderColor="brand.mutedRed" p={2} bg="brand.softRed">
+                  <HStack justify="space-between">
+                    <Text fontSize="12px" fontWeight="900" color="brand.ink">{zone.asset} VOID</Text>
+                    <Text fontSize="10px" fontWeight="700" color="brand.mutedRed">
+                      {zone.diffPercent.toFixed(2)}% GAP
+                    </Text>
+                  </HStack>
+                  <Text fontSize="10px" fontFamily="mono" color="brand.mutedInk">
+                    {formatPrice(zone.minLimit)} ↔ {formatPrice(zone.maxLimit)}
+                  </Text>
+                </Box>
+              ))}
+            </VStack>
+          )}
+
+          <VStack align="stretch" spacing={2}>
+            {sortedClusters.map((cluster) => (
+              <ClusterRow
+                key={cluster.id}
+                cluster={cluster}
+                onClick={() => handleClusterClick(cluster)}
+              />
+            ))}
+          </VStack>
         </VStack>
         <Text fontSize="8px" color="brand.mutedInk" textAlign="center" py={4} fontFamily="mono" opacity={0.6}>
           RANKED BY TOTAL VOLUME INTENSITY (L10M)
@@ -88,18 +137,18 @@ export const LiquidationClusters: React.FC<Props> = React.memo(({ minAmount }) =
       {/* Cluster Detail Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="lg" isCentered>
         <ModalOverlay bg="rgba(0,0,0,0.4)" backdropFilter="blur(2px)" />
-        <ModalContent 
-          borderRadius="0" 
-          bg="brand.paper" 
-          border="2px solid" 
+        <ModalContent
+          borderRadius="0"
+          bg="brand.paper"
+          border="2px solid"
           borderColor="brand.ink"
           boxShadow="none"
         >
-          <ModalHeader 
-            fontSize="14px" 
-            fontWeight="900" 
-            fontFamily="mono" 
-            borderBottom="1px solid" 
+          <ModalHeader
+            fontSize="14px"
+            fontWeight="900"
+            fontFamily="mono"
+            borderBottom="1px solid"
             borderColor="brand.border"
             pb={2}
           >
@@ -120,7 +169,7 @@ export const LiquidationClusters: React.FC<Props> = React.memo(({ minAmount }) =
                 <Tbody>
                   {selectedCluster?.events.map((ev, idx) => (
                     <Tr key={idx} fontSize="11px">
-                      <Td fontFamily="mono" py={1}>{ev.exchange.slice(0,3)}</Td>
+                      <Td fontFamily="mono" py={1}>{ev.exchange.slice(0, 3)}</Td>
                       <Td isNumeric fontFamily="mono" py={1}>{ev.price < 1 ? ev.price.toFixed(4) : ev.price.toFixed(2)}</Td>
                       <Td isNumeric fontFamily="mono" fontWeight="700" py={1}>${ev.value >= 1000 ? (ev.value / 1000).toFixed(1) + 'K' : Math.round(ev.value)}</Td>
                       <Td isNumeric fontFamily="mono" color="brand.mutedInk" py={1}>
@@ -143,17 +192,12 @@ const ClusterRow: React.FC<{ cluster: LiqCluster, onClick: () => void }> = ({ cl
   const isBuy = cluster.side === 'BUY';
   const color = isBuy ? 'brand.mutedGreen' : 'brand.mutedRed';
   const intensity = Math.min(cluster.totalValue / 1000000, 1); // Max intensity at 1M
-  
-  const formatPrice = (price: number) => {
-    if (price >= 1000) return price.toLocaleString(undefined, { maximumFractionDigits: 0 });
-    return price.toLocaleString(undefined, { maximumFractionDigits: 4 });
-  };
 
   return (
-    <Box 
-      borderBottom="1px solid" 
-      borderColor="brand.border" 
-      pb={2} 
+    <Box
+      borderBottom="1px solid"
+      borderColor="brand.border"
+      pb={2}
       position="relative"
       cursor="pointer"
       onClick={onClick}
@@ -165,12 +209,12 @@ const ClusterRow: React.FC<{ cluster: LiqCluster, onClick: () => void }> = ({ cl
         <VStack align="start" spacing={0}>
           <HStack spacing={2}>
             <Text fontSize="12px" fontWeight="900" color="brand.ink">{cluster.baseAsset}</Text>
-            <Box 
-              px={1} 
-              border="1px solid" 
-              borderColor={color} 
-              fontSize="8px" 
-              fontWeight="900" 
+            <Box
+              px={1}
+              border="1px solid"
+              borderColor={color}
+              fontSize="8px"
+              fontWeight="900"
               color={color}
               borderRadius="0"
             >
@@ -181,20 +225,20 @@ const ClusterRow: React.FC<{ cluster: LiqCluster, onClick: () => void }> = ({ cl
             {formatPrice(cluster.minPrice)} - {formatPrice(cluster.maxPrice)}
           </Text>
         </VStack>
-        
+
         <VStack align="end" spacing={0}>
           <Text fontSize="12px" fontWeight="900" color="brand.ink">
-            ${cluster.totalValue >= 1000000 
-              ? (cluster.totalValue / 1000000).toFixed(2) + 'M' 
+            ${cluster.totalValue >= 1000000
+              ? (cluster.totalValue / 1000000).toFixed(2) + 'M'
               : cluster.totalValue >= 1000 ? (cluster.totalValue / 1000).toFixed(1) + 'K' : Math.round(cluster.totalValue)}
           </Text>
           <Box h="2px" w="40px" bg="brand.border" position="relative">
-            <Box 
-              position="absolute" 
-              top={0} 
-              left={0} 
-              h="100%" 
-              bg={color} 
+            <Box
+              position="absolute"
+              top={0}
+              left={0}
+              h="100%"
+              bg={color}
               w={`${intensity * 100}%`}
               transition="width 0.5s ease-out"
             />

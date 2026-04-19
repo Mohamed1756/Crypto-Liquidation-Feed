@@ -23,3 +23,5 @@ netlify.toml
 
 # vite-env.d.ts
 .vite-env.d.ts
+
+/node_modules/

@@ -24,6 +24,106 @@ interface ClusteringState {
 const CLUSTERING_WINDOW_MINUTES = 10;
 const PRICE_BUCKET_PERCENT = 0.002; // 0.2% bucket size
 
+export const buildClustersFromLiquidations = (
+  liquidations: Liquidation[],
+  referenceTimeMillis = Date.now(),
+) => {
+  const thresholdMillis = referenceTimeMillis - CLUSTERING_WINDOW_MINUTES * 60_000;
+  const currentClusters: LiqCluster[] = [];
+
+  const sortedLiquidations = [...liquidations].sort(
+    (left, right) => left.timestamp.toMillis() - right.timestamp.toMillis(),
+  );
+
+  for (const liq of sortedLiquidations) {
+    if (liq.timestamp.toMillis() <= thresholdMillis) {
+      continue;
+    }
+
+    const matchIndex = currentClusters.findIndex((cluster) => {
+      if (cluster.lastUpdate.toMillis() <= thresholdMillis) {
+        return false;
+      }
+      if (cluster.baseAsset !== liq.baseAsset || cluster.side !== liq.side) {
+        return false;
+      }
+
+      const avgPrice = (cluster.minPrice + cluster.maxPrice) / 2;
+      const priceDiff = Math.abs(liq.price - avgPrice) / avgPrice;
+      return priceDiff <= PRICE_BUCKET_PERCENT;
+    });
+
+    if (matchIndex >= 0) {
+      const existing = currentClusters[matchIndex];
+      currentClusters[matchIndex] = {
+        ...existing,
+        minPrice: Math.min(existing.minPrice, liq.price),
+        maxPrice: Math.max(existing.maxPrice, liq.price),
+        totalValue: existing.totalValue + liq.value,
+        count: existing.count + 1,
+        lastUpdate: liq.timestamp,
+        events: [liq, ...existing.events].slice(0, 50),
+      };
+      continue;
+    }
+
+    currentClusters.push({
+      id: `cluster-${liq.id}`,
+      baseAsset: liq.baseAsset,
+      side: liq.side,
+      minPrice: liq.price,
+      maxPrice: liq.price,
+      totalValue: liq.value,
+      count: 1,
+      lastUpdate: liq.timestamp,
+      events: [liq],
+    });
+  }
+
+  return currentClusters
+    .filter((cluster) => cluster.lastUpdate.toMillis() > thresholdMillis)
+    .sort((left, right) => right.totalValue - left.totalValue)
+    .slice(0, 500);
+};
+
+export const buildVolatilityZones = (clusters: LiqCluster[]) => {
+  const massive = clusters.filter((cluster) => cluster.totalValue >= 1_000_000);
+  const byAsset: Record<string, LiqCluster[]> = {};
+
+  for (const cluster of massive) {
+    if (!byAsset[cluster.baseAsset]) {
+      byAsset[cluster.baseAsset] = [];
+    }
+    byAsset[cluster.baseAsset].push(cluster);
+  }
+
+  const voids: { asset: string; minLimit: number; maxLimit: number; diffPercent: number }[] = [];
+
+  Object.entries(byAsset).forEach(([asset, assetClusters]) => {
+    const sortedClusters = [...assetClusters].sort((left, right) => left.minPrice - right.minPrice);
+    for (let index = 0; index < sortedClusters.length - 1; index += 1) {
+      const lower = sortedClusters[index];
+      const higher = sortedClusters[index + 1];
+
+      if (higher.minPrice <= lower.maxPrice) {
+        continue;
+      }
+
+      const diffPercent = ((higher.minPrice - lower.maxPrice) / lower.maxPrice) * 100;
+      if (diffPercent > 0.05) {
+        voids.push({
+          asset,
+          minLimit: lower.maxPrice,
+          maxLimit: higher.minPrice,
+          diffPercent,
+        });
+      }
+    }
+  });
+
+  return voids.sort((left, right) => right.diffPercent - left.diffPercent);
+};
+
 export const useClusteringStore = create<ClusteringState>((set) => ({
   clusters: [],
   

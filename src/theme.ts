@@ -29,6 +29,10 @@ const theme = extendTheme({
   colors,
   styles: {
     global: {
+      '@keyframes pulseGlow': {
+        '0%': { opacity: 0.01 },
+        '100%': { opacity: 0.05 },
+      },
       body: {
         bg: 'brand.paper',
         color: 'brand.ink',
